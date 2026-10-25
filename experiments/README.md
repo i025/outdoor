@@ -1,0 +1,1 @@
+Experiment files should include git revision, config, model backend/version, prompt, seeds, tool trace, GPU/API cost, observed and held-out reconstruction metrics, edit metrics, and failure analysis. Generated outputs belong in gitignored runs/.

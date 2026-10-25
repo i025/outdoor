@@ -1,0 +1,1 @@
+Benchmark data and model weights must not be committed. Define manifest files containing scene ID, camera intrinsics/extrinsics, coordinate frame, source licenses, GT geometry/object IDs, edit scripts, observed-view IDs, and held-out-view IDs. See docs/method_design_v0.1.md.

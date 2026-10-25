@@ -1,0 +1,159 @@
+{
+  "example": "mountain_v02",
+  "recorded_date": "2026-10-25",
+  "input": {
+    "upstream_repository": "https://github.com/microsoft/MoGe",
+    "commit": "74fbce054ebed49800de42d0ad0e83495065719a",
+    "repository_path": "example_images/05_Mountain.jpg",
+    "source_url": "https://github.com/microsoft/MoGe/blob/74fbce054ebed49800de42d0ad0e83495065719a/example_images/05_Mountain.jpg",
+    "original_sha256": "670d322f6588713f7d9c7349091de0aacb2a5b0b37c7b7433995e110fb2bcfbc",
+    "original_size_pixels": [
+      2048,
+      1015
+    ],
+    "inference_size_pixels": [
+      512,
+      254
+    ],
+    "preprocessing": "EXIF orientation, RGB conversion, aspect-preserving resize to a maximum dimension of 512; no crop",
+    "resized_reference_png_sha256": "af4d19f4fb55b514853c50915fc09d8af53f6d1939d8d9b06960f9485cfb9434"
+  },
+  "moge": {
+    "repository": "https://github.com/microsoft/MoGe",
+    "commit": "74fbce054ebed49800de42d0ad0e83495065719a",
+    "model_id": "Ruicheng/moge-2-vits-normal",
+    "model_url": "https://huggingface.co/Ruicheng/moge-2-vits-normal",
+    "entry_point": "moge.model.v2.MoGeModel.from_pretrained(...).infer(...)",
+    "checkpoint_bundled": false,
+    "version": "v2",
+    "resolution_level": 0,
+    "device": "cuda:0",
+    "scale_status": "model_estimated_not_surveyed",
+    "checkpoint_load_warnings": []
+  },
+  "utils3d_moge": {
+    "repository": "https://github.com/EasternJournalist/utils3d-moge",
+    "declared_upstream_pin": "62f09d58509485564e24d5d9f6aac9ee9ebc0c37",
+    "pin_source": "The selected MoGe commit pyproject.toml",
+    "local_checkout_revision_status": "Local helper has no Git metadata; equality to the declared upstream pin was not independently verified."
+  },
+  "infinigen": {
+    "repository": "https://github.com/princeton-vl/infinigen",
+    "commit": "f5bcba8de47623da9b715348cf95822445e0e9a7",
+    "version": "1.3.3",
+    "factory": "infinigen.assets.grassland.grass_tuft.GrassTuftFactory",
+    "scatter_api": "infinigen.core.placement.instance_scatter.scatter_instances",
+    "native_geometry_nodes": true,
+    "source_code_bundled": false,
+    "preexisting_local_modification": "infinigen/core/rendering/render.py includes an existing render-cycle reinitialization patch; OutdoorGraph does not modify third-party sources."
+  },
+  "manual_region": {
+    "source": "explicit manual polygon; not inferred semantic segmentation",
+    "polygon_normalized": [
+      [
+        0.01,
+        0.8
+      ],
+      [
+        0.2,
+        0.87
+      ],
+      [
+        0.25,
+        0.99
+      ],
+      [
+        0.01,
+        0.99
+      ]
+    ],
+    "size_pixels": [
+      512,
+      254
+    ],
+    "mask_file": "ground_manual.png",
+    "sha256": "acd72b2cd16a6f885ae044af9f9c74ae79f42e4408cb17979ce2356df7dbcf58",
+    "selection": "Native scatter receives a FACE boolean selecting triangles whose three region_weight values equal one; actual instance centers are checked again by source-image mask projection."
+  },
+  "world_orientation": {
+    "source": "Manual level-camera/no-roll declaration, not estimated gravity",
+    "cv_axes": "right, down, forward",
+    "world_axes": "right, forward, up",
+    "world_from_camera_cv": [
+      [
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1
+      ]
+    ],
+    "metric_status": "Model-estimated units, not surveyed or externally calibrated metric ground truth"
+  },
+  "seed": 2026,
+  "geometry": {
+    "stride": 4,
+    "max_edge_depth_ratio": 0.25,
+    "scale_m_per_unit": 1.0
+  },
+  "vegetation": {
+    "target_instances": 80,
+    "asset_count": 2,
+    "scale": 2.0,
+    "computed_density_per_model_m2": 1.9090283304030917
+  },
+  "verified_environment": {
+    "outdoorgraph": {
+      "version": "0.2.0",
+      "python": "3.11.16",
+      "setuptools": "84.0.0",
+      "pytest": "9.1.1"
+    },
+    "moge": {
+      "python": "3.13.15",
+      "torch": "2.13.0+cu126",
+      "numpy": "2.5.2",
+      "gpu": "NVIDIA A100",
+      "inference_device": "cuda:0"
+    },
+    "infinigen_dependencies": {
+      "python": "3.10.22",
+      "numpy": "1.26.2",
+      "scipy": "1.15.3",
+      "gin-config": "0.5.0",
+      "landlab": "2.7.0",
+      "scikit-image": "0.19.3",
+      "trimesh": "5.1.1"
+    },
+    "blender": {
+      "version": "3.6.0",
+      "bundled_python": "3.10.12",
+      "device": "CPU",
+      "cycles_samples": 16,
+      "cpu_threads": 4
+    },
+    "notes": [
+      "MoGe source requires Python >=3.10; Python 3.13.15 is the environment verified here, not a claim that 3.13 is required.",
+      "This Infinigen installation requires Python 3.10 and Blender 3.6.0; its native dependencies are separate from OutdoorGraph Python 3.11.",
+      "The selected MoGe source defaults to CUDA 13 wheels, whereas this run used torch 2.13.0+cu126; choose a PyTorch build compatible with the local driver.",
+      "Model inference used a GPU; only the Blender generation/rendering stages were verified as CPU stages."
+    ]
+  }
+}

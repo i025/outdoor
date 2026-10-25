@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "id": "synthetic_valley_200m",
+  "world": {"units": "m", "axis": "z_up", "bounds_xy": [0, 0, 200, 200]},
+  "evidence": [
+    {"id":"synthetic_authoring", "modality":"manual", "source":"hand-authored synthetic scene; NOT a reconstructed image", "confidence":1.0, "status":"generated"}
+  ],
+  "nodes": [
+    {"id":"terrain_main", "kind":"terrain", "operator":"terrain.heightfield", "seed":7, "bounds_xy":[0,0,200,200],
+     "params":{"base_height_m":0,"slope_x":0.009,"slope_y":0.004,"noise_amplitude_m":0.12,"noise_scale_m":32,
+               "local_bump":{"x":95,"y":90,"sigma_m":32,"amplitude_m":0}}, "evidence_ids":["synthetic_authoring"]},
+    {"id":"road_main", "kind":"road", "operator":"road.polyline", "bounds_xy":[5,15,195,185],
+     "params":{"control_points_xy":[[10,45],[50,51],[90,55],[145,92],[190,140]],"width_m":5,"height_offset_m":0},
+     "evidence_ids":["synthetic_authoring"]},
+    {"id":"forest_main", "kind":"vegetation", "operator":"vegetation.scatter", "seed":2026, "bounds_xy":[20,65,190,190],
+     "params":{"count":65,"min_spacing_m":5,"road_buffer_m":2.5,"noise_scale_m":27,"species":"conifer_proxy"},
+     "evidence_ids":["synthetic_authoring"]},
+    {"id":"building_main", "kind":"building", "operator":"building.proxy", "bounds_xy":[80,10,110,45],
+     "params":{"position_xy":[93,31],"size_m":[9,7,7]}, "evidence_ids":["synthetic_authoring"]},
+    {"id":"background", "kind":"background", "operator":"background.constant", "bounds_xy":[0,0,200,200],
+     "params":{"color":"#a1c7e4"}}
+  ],
+  "dependencies": [
+    {"source_id":"terrain_main","target_id":"road_main","relation":"samples_terrain_height","confidence":1,"status":"validated"},
+    {"source_id":"terrain_main","target_id":"forest_main","relation":"samples_terrain_height","confidence":1,"status":"validated"},
+    {"source_id":"terrain_main","target_id":"building_main","relation":"supported_by_terrain","confidence":1,"status":"validated"},
+    {"source_id":"road_main","target_id":"forest_main","relation":"road_exclusion_buffer","confidence":1,"status":"validated"}
+  ],
+  "constraints": [
+    {"id":"house_on_ground","rule":"ground_contact","node_ids":["building_main","terrain_main"],"params":{"tolerance_m":0.01}},
+    {"id":"road_on_ground","rule":"road_contact","node_ids":["road_main","terrain_main"],"params":{"tolerance_m":0.01}},
+    {"id":"road_grade","rule":"road_grade","node_ids":["road_main"],"params":{"max_grade":0.2}},
+    {"id":"forest_off_road","rule":"vegetation_road_clearance","node_ids":["forest_main","road_main"],"params":{"buffer_m":2.5}},
+    {"id":"forest_populated","rule":"vegetation_min_count","node_ids":["forest_main"],"params":{"min_count":25}}
+  ]
+}

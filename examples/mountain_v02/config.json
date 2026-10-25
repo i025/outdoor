@@ -1,0 +1,52 @@
+{
+  "schema_version": "0.2",
+  "seed": 2026,
+  "input": {
+    "image": "/path/to/MoGe/example_images/05_Mountain.jpg",
+    "manual_region_polygon_normalized": [
+      [
+        0.01,
+        0.8
+      ],
+      [
+        0.2,
+        0.87
+      ],
+      [
+        0.25,
+        0.99
+      ],
+      [
+        0.01,
+        0.99
+      ]
+    ]
+  },
+  "moge": {
+    "python": "/path/to/moge-environment/bin/python",
+    "repo": "/path/to/MoGe",
+    "utils3d_repo": "/path/to/utils3d-moge",
+    "weights": "/path/to/moge-2-vits-normal/model.pt",
+    "version": "v2",
+    "model_id": "Ruicheng/moge-2-vits-normal",
+    "device": "cuda:0",
+    "cuda_visible_devices": "0",
+    "resize": 512,
+    "resolution_level": 0
+  },
+  "geometry": {
+    "stride": 4,
+    "max_edge_depth_ratio": 0.25,
+    "scale_m_per_unit": 1.0
+  },
+  "blender": {
+    "executable": "/path/to/blender-3.6.0/blender",
+    "infinigen_source": "/path/to/infinigen",
+    "python_site_packages": "/path/to/infinigen-environment/lib/python3.10/site-packages"
+  },
+  "vegetation": {
+    "target_instances": 80,
+    "asset_count": 2,
+    "scale": 2.0
+  }
+}

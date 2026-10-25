@@ -1,0 +1,77 @@
+{
+  "status": "passed",
+  "evidence": "Measured existing integration run; this compact summary is extracted from the original reports, not a rerun or a replacement for the full audit.",
+  "source_run": "runs/mountain_v02_verified",
+  "scene_id": "moge_infinigen_mountain_v02",
+  "source_reports_sha256": {
+    "summary.json": "fe2fbc4f4cdf35ea4152c7fddccdcd864b2dad1a55f29d9d8f2700edcca53cd3",
+    "geometry/moge_report.json": "5edeaea190507d5786ccd8bc7af011cf0d09b20633ad2b2ff961957722c41092",
+    "blender/reopen_verification.json": "4c4f59deb26dbe74ab3d61056d18e455a23bd859e36d0aed83b796f1fd32cb19"
+  },
+  "target_vegetation_instances": 80,
+  "actual_vegetation_instances": 86,
+  "surface_vertices": 5464,
+  "surface_faces": 9741,
+  "selected_surface_faces": 438,
+  "manual_region_area_model_m2": 41.90613555908203,
+  "camera_projection_max_error_pixels": 2.970554851087551e-05,
+  "surface_contact_max_error_model_m": 8.313940270454623e-06,
+  "surface_contact_tolerance_model_m": 0.001,
+  "contact_scope": "Actual instance origins compared with the reconstructed triangle surface using BVH nearest distance; not a blade collision or full-scene physics check.",
+  "manual_mask_inside_instance_centers": 86,
+  "manual_mask_outside_instance_centers": 0,
+  "mask_scope": "Actual instance centers projected through the calibrated CV camera into the source-resolution manual mask; blade geometry may extend beyond the region.",
+  "mask_pixel_mapping": "world->CV->source K; floor pixel coordinates with centers at i+0.5",
+  "embedded_bundle_matches": true,
+  "provenance_matches": true,
+  "packed_images": 1,
+  "unique_saved_object_ids": 7,
+  "render_device": "CPU",
+  "render_samples": 16,
+  "decoded_renders": {
+    "render.png": {
+      "width": 640,
+      "height": 318,
+      "finite": true,
+      "variance": 0.013773464597761631,
+      "mean_spatial_channel_variance": 0.013390774838626385,
+      "min": 0.0,
+      "max": 0.7803922295570374
+    },
+    "overview.png": {
+      "width": 640,
+      "height": 318,
+      "finite": true,
+      "variance": 0.012284561060369015,
+      "mean_spatial_channel_variance": 0.012147347442805767,
+      "min": 0.0,
+      "max": 0.7764706611633301
+    }
+  },
+  "glb_import": {
+    "mesh_objects": 2,
+    "faces": 90255,
+    "unique_object_ids": 2,
+    "node_ids": [
+      "infinigen_grass",
+      "moge_surface"
+    ],
+    "extras_provenance_matches": true,
+    "sha256": "95704207be5617c9bf16f4f2b5636c000ff3fc889335eaa853204527c98efa63"
+  },
+  "included_png_sha256": {
+    "render.png": "47de72dc09bd3b22b3c38c5a60381df57cf9b6efd73825555030013c97e5b4ad",
+    "overview.png": "607b33688600d2e0f18f6639712a2a55bc36e61edb83404bcaa2a7f07d3e24a6",
+    "ground_manual.png": "acd72b2cd16a6f885ae044af9f9c74ae79f42e4408cb17979ce2356df7dbcf58"
+  },
+  "limitations": [
+    "manual mask and declared world orientation",
+    "estimated monocular scale",
+    "single-view 2.5D surface; unseen geometry is not reconstructed",
+    "image texture comes from reference, not a learned procedural material",
+    "no mechanism induction or global optimization in v0.2",
+    "Checks cover instance centers/origins, not complete grass blades, collision freedom or physical correctness.",
+    "The local overview exposes stretched single-view image textures; it is not an independent ground-truth view.",
+    "Identical seeds are reproducible snapshots only with the same backend/dependency configuration; target count is not guaranteed."
+  ]
+}
