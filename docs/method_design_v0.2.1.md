@@ -19,11 +19,16 @@ schema version. The [operator API](execution_api.md) defines the actual contract
 
 ## Validation is evidence, not confidence
 
-A proposed semantic edge remains a hypothesis until explicit typed validation.
+New dependencies default to proposed. A semantic edge remains a hypothesis
+until explicit typed validation through an extensible RelationSpec registry.
 Endpoints, ports, kinds, required inputs and executable topology are checked.
-Legacy validated declarations receive the same checks. Generation then validates
+Legacy validated declarations receive the same checks, including allowed semantic
+roles, ports and required validators. Missing-status legacy edges stay proposed
+until an explicit migration validation; confidence never supplies evidence. Generation then validates
 upstream artifacts, operator pre/postconditions and related hard constraints.
-Only successful completion produces executable evidence in the returned IR.
+Only successful completion and relation-specific evidence for the exact endpoints
+produce executable status in the returned IR and evidence in `dependency_reports`. Unrelated passed checks cannot
+certify an edge.
 Failures preserve their reasons and block dependent work; the CLI rejects the
 run. A high confidence score never substitutes for any gate.
 
@@ -37,8 +42,12 @@ than optimize an infeasible graph automatically.
 Each result records the operator release/backend, parameters, bounds, seed,
 provenance and dependency bindings. Upstream result identities propagate changes
 into consumer signatures. Rewiring/removing dependencies changes the consumer
-even if its parameters are unchanged. Missing or invalid resources are rebuilt;
-no caller-supplied graph-version assertion or dirty set is necessary.
+even if its parameters are unchanged. Declared external images/NPZ/meshes/textures
+contribute streamed content identities per node; in-place byte changes invalidate
+only their consumers, while unchanged contents retain cache hits. The MoGe adapter
+declares its consumed geometry and reference texture, and reloads private packed
+images on rebuild. Missing or invalid cached/backend resources are rebuilt;
+a missing declared input file instead fails safely. No caller-supplied graph-version assertion or dirty set is necessary.
 
 Real Blender collections serve as backend resources. The worker opens the
 previous saved scene, reuses unaffected nodes and rebuilds only invalid nodes.

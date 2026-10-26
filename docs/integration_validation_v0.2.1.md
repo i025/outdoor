@@ -1,5 +1,8 @@
 # OutdoorGraph v0.2.1 integration validation
 
+This preserves the original acceptance record. Subsequent P0 fixes and final
+253-test revalidation are recorded in the [P0 report](p0_review_validation_v0.2.1.md).
+
 Validated locally on 2026-10-26, branch `feat/unified-generative-graph`, based on
 stable v0.2 commit `1fedeb9ba0015e26b72cc97ee08516e34fbf62b7`. This work is submitted on the feature branch for researcher code review;
 `main` remains at that commit. It is not a formal release or a main-branch merge.
@@ -158,9 +161,12 @@ instance centers/origins, not all blades or collision-free physical support.
 The independent object is a simple shelter proxy, and the terrain uses the
 existing lightweight heightfield rather than full Infinigen terrain generation.
 The legacy MoGe output is still a single-view 2.5D surface with estimated scale.
-Backend installs and weights must already exist. An external adapter that
-replaces an asset outside the graph must update its declared input identity;
-arbitrary in-place external-file changes are not detected with file hashing.
+Backend installs and weights must already exist. The P0 review fixes now include
+per-node declared external-file content identities; same-path changes are detected
+for the MoGe NPZ/reference texture and other explicitly declared operator inputs.
+See the [P0 revalidation report](p0_review_validation_v0.2.1.md) for the subsequent
+regression run and lifecycle/semantic compatibility changes. The measurements
+above describe the original v0.2.1 acceptance run.
 
 Changes are prepared on the feature branch for code review. No merge into
 `main` or formal release is part of this work; no third-party repository was modified.

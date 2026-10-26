@@ -32,8 +32,9 @@ excluded from Git; the input remains in the recorded upstream MoGe example set.
 
 ![Actual initial and edited Blender renders](examples/v021/comparison.png)
 
-[Measured editing example](examples/v021/README.md): 216 tests passed,
-including 9 actual Blender regressions; 5 external geometry checks also passed.
+[Measured editing example](examples/v021/README.md) retains the original editing
+results. The [P0 revalidation](docs/p0_review_validation_v0.2.1.md) passes 253 tests,
+including 12 actual Blender regressions, plus five external geometry checks.
 
 
 The same `Planner` schedules registered proxy and real Blender callbacks from the
@@ -41,18 +42,23 @@ Scene IR. Operators declare input slots, output kinds, parameters, version, seed
 pre/postconditions, backend and artifact metadata. IDs are scene data, not executor
 branches. Old `run`, `demo` and `integrate` commands remain supported.
 
-Legacy `validated` edges are rechecked. Proposed relations need explicit typed
+New dependencies default to `proposed`; legacy `validated` edges are rechecked
+through an extensible typed RelationSpec registry. Proposed relations need explicit
 validation; confidence alone grants no permission. Execution records preserve the
 contract gate, actual execution results and related hard-constraint evidence.
 Unknown semantic hypotheses remain proposed. A failed hard constraint fails the
 run and blocks affected downstream execution.
 
 Cache signatures cover operator/version/backend, parameters, bounds, seed,
-provenance metadata and upstream results/ports/relations. Parameter and graph
+provenance metadata, upstream results/ports/relations and the contents of declared
+external files. Same-path image/mesh/texture changes invalidate their consuming
+subgraph; unchanged inputs keep cache hits. Parameter and graph
 edits are detected without a caller dirty list. Missing Blender objects cause
 regeneration. Preserved node collections, native instances and metadata are
-compared directly after reopening the previous scene. This is cache invalidation,
-not an added file-integrity system.
+compared directly after reopening the previous scene. Physical dependencies require
+validation evidence matching their exact source and target. See the
+[P0 review validation](docs/p0_review_validation_v0.2.1.md) for regression results
+and explicit migration of older dependencies with no status.
 
 ```bash
 cp configs/unified_blender.json configs/unified_blender.local.json
@@ -103,9 +109,9 @@ python -m pytest -q
 outdoorgraph demo --scene configs/demo_valley.json --out runs/demo_valley
 ```
 
-The default suite has **207 passing core tests**, retaining all 110 v0.2 tests;
-9 real-backend tests are explicitly skipped until backend configuration is supplied.
-With `OUTDOORGRAPH_BLENDER_CONFIG`, **216 tests pass with no skips**. See
+The default suite has **241 passing core tests**, retaining the prior suite;
+12 real-backend tests are explicitly skipped until backend configuration is supplied.
+With `OUTDOORGRAPH_BLENDER_CONFIG`, **253 tests pass with no skips**. See
 [environment setup](docs/environment.md) for Conda and tested package versions.
 `environment.yml` creates an isolated core environment; heavy backend dependencies
 are not installed there.

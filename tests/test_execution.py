@@ -9,6 +9,16 @@ from outdoorgraph.execution import (
     ContractValidationError, InputSlot, OperatorSpec, Planner, execute, proxy_registry,
 )
 from outdoorgraph.ir import Constraint, Dependency, Evidence, Node, Scene
+from outdoorgraph.relations import RelationSpec
+
+
+def register_unit_relation(registry, name, source_kinds, target_kinds, port):
+    """Explicit program-flow semantics for toy callables, not physical claims."""
+    def program_contract(edge, source, target, context):
+        return {"passed": True, "reason": "Unit fixture program flow was explicitly registered"}
+
+    registry.register_relation(RelationSpec(name, source_kinds, target_kinds,
+                                           input_ports=(port,), validators=(program_contract,)))
 
 
 @pytest.fixture
@@ -32,7 +42,9 @@ def toy_graph():
     scene = Scene("unit_graph", [Node("input_alpha", "raw", "unit.source", {"value": 3}),
                                   Node("result_beta", "processed", "unit.target"),
                                   Node("independent_sky", "background", "background.constant")],
-                  dependencies=[Dependency("input_alpha", "result_beta", "unit_feed", input_port="source")])
+                  dependencies=[Dependency("input_alpha", "result_beta", "unit_feed", status="validated", input_port="source")])
+    for relation in ("unit_feed", "unit_feed_other"):
+        register_unit_relation(registry, relation, ("raw",), ("processed",), "source")
     return scene, registry, calls
 
 
@@ -111,11 +123,12 @@ def test_multiple_input_order_changes_signature_and_matches_fresh_execution(toy_
         "unit.join", lambda node, inputs, context: {
             "kind": "processed", "joined": "".join(item["value"] for item in inputs["sources"])},
         {"sources": InputSlot(("raw",), multiple=True, relations=("unit_join",))}, ("processed",)))
+    register_unit_relation(registry, "unit_join", ("raw",), ("processed",), "sources")
     scene = Scene("ordered_inputs", [Node("alpha", "raw", "unit.source", {"value": "a"}),
                                       Node("beta", "raw", "unit.source", {"value": "b"}),
                                       Node("combined", "processed", "unit.join")],
-                  [Dependency("alpha", "combined", "unit_join"),
-                   Dependency("beta", "combined", "unit_join")])
+                  [Dependency("alpha", "combined", "unit_join", status="validated"),
+                   Dependency("beta", "combined", "unit_join", status="validated")])
     before = execute(scene, registry=registry)
     assert before.passed and before.artifacts["combined"]["joined"] == "ab"
     scene.dependencies.reverse()
@@ -318,12 +331,14 @@ def test_late_ready_hard_failure_invalidates_previously_generated_descendants():
     registry.register(OperatorSpec("unit.terrain", lambda node, *args: {
         "kind": "terrain", "params": {"base_height_m": node.params["height"]}},
         {"source": InputSlot(("third",), relations=("unit_chain",))}, ("terrain",)))
+    register_unit_relation(registry, "unit_chain", ("building", "middle", "third"),
+                           ("middle", "third", "terrain"), "source")
     scene = Scene("late_constraint", [Node("a", "building", "unit.building"),
                                       Node("b", "middle", "unit.middle"),
                                       Node("c", "third", "unit.third"),
                                       Node("d", "terrain", "unit.terrain", {"height": 1})],
-                  [Dependency("a", "b", "unit_chain"), Dependency("b", "c", "unit_chain"),
-                   Dependency("c", "d", "unit_chain")],
+                  [Dependency("a", "b", "unit_chain", status="validated"), Dependency("b", "c", "unit_chain", status="validated"),
+                   Dependency("c", "d", "unit_chain", status="validated")],
                   [Constraint("late_ground", "ground_contact", ["a", "d"])])
     first = execute(scene, registry=registry)
     assert not first.passed
@@ -348,8 +363,9 @@ def test_cycle_produces_planning_failure_without_callable_execution(toy_graph):
     _, registry, calls = toy_graph
     registry.register(OperatorSpec("unit.loop", lambda *args: calls.append("called"),
                                    {"upstream": InputSlot(("raw",), relations=("unit_loop",))}, ("raw",)))
+    register_unit_relation(registry, "unit_loop", ("raw",), ("raw",), "upstream")
     scene = Scene("loop", [Node("left", "raw", "unit.loop"), Node("right", "raw", "unit.loop")],
-                  [Dependency("left", "right", "unit_loop"), Dependency("right", "left", "unit_loop")])
+                  [Dependency("left", "right", "unit_loop", status="validated"), Dependency("right", "left", "unit_loop", status="validated")])
     result = execute(scene, registry=registry)
     assert not result.passed and calls == []
     assert result.failures[0]["phase"] == "planning"
@@ -421,3 +437,12 @@ def test_registered_contract_is_inspectable_and_duplicate_registration_rejected(
     assert description["seed_source"] == "Node.seed"
     with pytest.raises(ValueError, match="already registered"):
         registry.register(spec)
+
+
+def test_unrelated_proposed_edge_insertion_keeps_preserved_artifacts_identical(demo_scene):
+    before = execute(demo_scene)
+    demo_scene.dependencies.insert(0, Dependency("background", "terrain_main", "unit_observed_near"))
+    after = execute(demo_scene, previous=before)
+    assert before.passed and after.passed
+    assert after.rebuilt_ids == []
+    assert after.artifacts == before.artifacts

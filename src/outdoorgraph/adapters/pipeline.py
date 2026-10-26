@@ -97,7 +97,10 @@ def make_bundle(config: dict[str, Any], report: dict[str, Any], backend_commit: 
                  metadata={"provenance": provenance["infinigen"], "region_source": "manual",
                            "dependency_origin": "declared adapter contract, not inferred from image"}),
         ],
-        dependencies=[Dependency("moge_surface", "infinigen_grass", "scatter_on_reconstructed_surface")],
+        # The isolated Blender adapter explicitly validates this proposal against
+        # its registered contracts before execution; model confidence grants no permit.
+        dependencies=[Dependency("moge_surface", "infinigen_grass", "scatter_on_reconstructed_surface",
+                                 status="proposed")],
         evidence=[Evidence("reference_image_evidence", "image", config["input"]["image"])],
     )
     bundle = SceneBundle(

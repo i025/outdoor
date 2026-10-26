@@ -15,7 +15,7 @@ def bundle():
         scene=Scene("reference_scene", [
             Node("observed_mesh", "terrain", "external.moge.mesh", {"asset_id": "mesh"}),
             Node("grass", "vegetation", "external.infinigen.grass", {"region_id": "lawn"}),
-        ], dependencies=[Dependency("observed_mesh", "grass", "supported_by_terrain")]),
+        ], dependencies=[Dependency("observed_mesh", "grass", "supported_by_terrain", status="validated")]),
         camera={"id": "reference_camera", "width": 640, "height": 480,
                 "intrinsics_pixels": [[500, 0, 320], [0, 500, 240], [0, 0, 1]],
                 "world_from_camera_cv": [[1, 0, 0, 0], [0, 0, 1, 0],
@@ -63,7 +63,7 @@ def test_bundle_rejects_dangling_node_reference(bundle, key):
 
 
 def test_bundle_runs_core_ir_validation(bundle):
-    bundle.scene.dependencies.append(Dependency("grass", "observed_mesh", "cycle"))
+    bundle.scene.dependencies.append(Dependency("grass", "observed_mesh", "cycle", status="validated"))
     with pytest.raises(SceneValidationError, match="Cycle"):
         validate_bundle(bundle)
 

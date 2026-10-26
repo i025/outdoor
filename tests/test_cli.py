@@ -52,15 +52,34 @@ def test_cli_constraint_failure_exit_status(tmp_path, demo_scene, command, hard)
     contact = next(c for c in demo_scene.constraints if c.id == "road_on_ground")
     contact.hard = hard
     result, reports = run_cli(tmp_path, demo_scene, command)
-    assert result.returncode == (1 if hard else 0), result.stderr
-    assert reports["initial"]["passed"] is not hard
+    # Terrain sampling has mandatory relation geometry validation. Marking a
+    # duplicate Scene contact constraint soft cannot authorize a floating road.
+    assert result.returncode == 1, result.stderr
+    assert not reports["initial"]["passed"]
     check = next(c for c in reports["initial"]["constraint_reports"]
                  if c["id"] == "road_on_ground")
     assert not check["passed"]
     assert check["hard"] is hard
     if command == "demo":
+        assert not reports["summary"]["initial_passed"]
+        assert not reports["summary"]["edited_passed"]
+
+
+@pytest.mark.parametrize("command", ["run", "demo"])
+@pytest.mark.parametrize("hard", [True, False])
+def test_cli_optional_constraint_failure_exit_status(tmp_path, demo_scene, command, hard):
+    population = next(c for c in demo_scene.constraints if c.rule == "vegetation_min_count")
+    population.params["min_count"] = 1_000_000
+    population.hard = hard
+    result, reports = run_cli(tmp_path, demo_scene, command)
+    assert result.returncode == (1 if hard else 0), result.stderr
+    assert reports["initial"]["passed"] is not hard
+    check = next(c for c in reports["initial"]["constraint_reports"] if c["id"] == population.id)
+    assert not check["passed"] and check["hard"] is hard
+    if command == "demo":
         assert reports["summary"]["initial_passed"] is not hard
         assert reports["summary"]["edited_passed"] is not hard
+
 
 
 @pytest.mark.parametrize("hard", [True, False])

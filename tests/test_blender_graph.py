@@ -131,7 +131,7 @@ def test_actual_hard_constraint_failure_is_saved_and_rejected(experiment):
 def test_real_dependency_structure_edit_invalidates_only_new_consumer(experiment):
     previous = experiment / "road_edit"
     scene = Scene.from_dict(read(previous / "scene_ir.json"))
-    scene.dependencies.append(Dependency("access_track", "remote_meadow", "road_exclusion_buffer", input_port="roads"))
+    scene.dependencies.append(Dependency("access_track", "remote_meadow", "road_exclusion_buffer", status="validated", input_port="roads"))
     out = experiment / "dependency_edit"
     run_graph(scene, load_graph_config(Path(CONFIG)), out, previous=previous)
     state = read(out / "state.json")
@@ -170,8 +170,8 @@ def test_final_actual_geometry_failure_revokes_executable_state(experiment):
         Node("sampled_west", "terrain", "blender.terrain", {"grid_spacing_m": 0.25}, west),
         Node("sampled_east", "terrain", "blender.terrain", {"grid_spacing_m": 2.0}, east),
     ], [
-        Dependency("profile_a", "sampled_west", "samples_terrain_height", input_port="heightfield"),
-        Dependency("profile_b", "sampled_east", "samples_terrain_height", input_port="heightfield"),
+        Dependency("profile_a", "sampled_west", "samples_terrain_height", status="validated", input_port="heightfield"),
+        Dependency("profile_b", "sampled_east", "samples_terrain_height", status="validated", input_port="heightfield"),
     ], [Constraint("analytic_seam", "terrain_continuity", ["sampled_west", "sampled_east"],
                    {"tolerance_m": 0.0001, "sample_spacing_m": 0.25})])
     out = experiment / "actual_geometry_failure"

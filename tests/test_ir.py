@@ -26,7 +26,7 @@ def test_reject_missing_dependency_target(demo_scene):
 
 def test_reject_validated_cycle(demo_scene):
     scene = copy.deepcopy(demo_scene)
-    scene.dependencies.append(Dependency("forest_main", "terrain_main", "bad_feedback"))
+    scene.dependencies.append(Dependency("forest_main", "terrain_main", "bad_feedback", status="validated"))
     with pytest.raises(SceneValidationError, match="Cycle"):
         validate_scene(scene)
 

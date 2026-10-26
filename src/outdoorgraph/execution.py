@@ -17,16 +17,16 @@ import time
 from typing import Any, Callable
 
 from outdoorgraph.constraints import evaluate_constraints
+from outdoorgraph.external_inputs import resolve_external_inputs
 from outdoorgraph.ir import Node, Scene
 from outdoorgraph.operators import REGISTRY
+from outdoorgraph.relations import RelationRegistry, RelationSpec, default_relation_registry
 from outdoorgraph.runtime import RunResult, downstream
 from outdoorgraph.validation import topological_ids, validate_scene
 
 Artifact = dict[str, Any]
 RunCallable = Callable[[Node, dict[str, Any], dict[str, Any]], Artifact]
-EXECUTION_RELATIONS = frozenset({"samples_terrain_height", "supported_by_terrain",
-                                "road_exclusion_buffer", "scatter_on_reconstructed_surface",
-                                "heightfield_to_surface"})
+
 
 
 class ContractValidationError(ValueError):
@@ -59,6 +59,7 @@ class OperatorSpec:
     postconditions: tuple[Callable, ...] = ()
     cache_validator: Callable | None = None
     parameters: dict[str, Any] = field(default_factory=dict)
+    external_inputs: Callable | dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {"name": self.name, "version": self.version, "backend": self.backend,
@@ -68,12 +69,19 @@ class OperatorSpec:
                 "output_kinds": list(self.output_kinds), "parameters": deepcopy(self.parameters),
                 "seed_source": "Node.seed", "dependency_source": "Scene.dependencies",
                 "preconditions": [getattr(check, "__name__", type(check).__name__) for check in self.preconditions],
-                "postconditions": [getattr(check, "__name__", type(check).__name__) for check in self.postconditions]}
+                "postconditions": [getattr(check, "__name__", type(check).__name__) for check in self.postconditions],
+                "external_inputs": (getattr(self.external_inputs, "__name__", type(self.external_inputs).__name__)
+                                    if callable(self.external_inputs) else
+                                    {name: str(path) for name, path in (self.external_inputs or {}).items()})}
 
 
 class OperatorRegistry:
-    def __init__(self) -> None:
+    def __init__(self, relations: RelationRegistry | None = None) -> None:
         self.specs: dict[str, OperatorSpec] = {}
+        self.relations = relations if relations is not None else default_relation_registry()
+
+    def register_relation(self, spec: RelationSpec, replace: bool = False) -> RelationSpec:
+        return self.relations.register(spec, replace=replace)
 
     def register(self, spec: OperatorSpec, replace: bool = False) -> OperatorSpec:
         if not isinstance(spec, OperatorSpec) or not callable(spec.run):
@@ -154,6 +162,7 @@ class Plan:
     bindings: dict[str, dict[str, list[str]]]
     dependency_reports: list[dict[str, Any]]
     errors: list[dict[str, Any]] = field(default_factory=list)
+    relations: RelationRegistry | None = field(default=None, repr=False)
 
     @property
     def passed(self) -> bool:
@@ -186,11 +195,11 @@ class Planner:
         self.registry = registry if registry is not None else default_registry()
 
     def validate_dependencies(self, only_proposed: bool = True) -> DependencyValidation:
-        """Promote typed hypotheses to validated contracts, never to executable.
+        """Explicitly validate hypotheses; runtime geometry gates remain pending.
 
-        A complete target contract must be satisfiable. Unknown semantic
-        relations remain proposed regardless of their confidence. No operator
-        callable, precondition or geometry check runs in this API.
+        Serialized validated/executable declarations are never verification
+        evidence. Every candidate is checked against its current semantic
+        registry, operator contract, ports and graph topology on every plan.
         """
         candidate = deepcopy(self.scene)
         eligible = set()
@@ -208,13 +217,25 @@ class Planner:
         failed_targets = {item.get("node_id") for item in plan.errors}
         for report in plan.dependency_reports:
             index = report["index"]
+            report["declared_status"] = self.scene.dependencies[index].status
             edge = candidate.dependencies[index]
             if index not in eligible:
+                # Legacy declarations are still rechecked, even if the caller
+                # only requests migration of proposed edges.
+                if report["status"] == "proposed":
+                    edge.status = "proposed"
+                elif report["status"] == "contract_rejected":
+                    edge.status = "rejected"
+                elif report["status"] == "contract_validated":
+                    edge.status = "validated"
                 continue
             if report["status"] == "contract_validated" and edge.target_id not in failed_targets:
                 edge.status = "validated"
                 report.update(status="validated", lifecycle="validated", geometry_status="pending",
-                              reason="Typed dependency contract validated; runtime geometry gates remain pending")
+                              reason="Semantic and typed contracts validated; runtime geometry gates remain pending")
+            elif report["status"] == "contract_rejected":
+                edge.status = "rejected"
+                report.update(lifecycle="rejected", geometry_status="not_checked")
             else:
                 edge.status = "proposed"
                 report.update(status="proposed", lifecycle="proposed", geometry_status="not_checked")
@@ -240,7 +261,9 @@ class Planner:
                       "relation": edge.relation, "confidence": edge.confidence,
                       "declared_status": edge.status, "input_port": edge.input_port,
                       "output_port": edge.output_port or "result", "status": state,
-                      "lifecycle": state, "geometry_status": "not_applicable" if state in {"proposed", "rejected"} else "pending"}
+                      "lifecycle": edge.status if state != "contract_validated" else "validated",
+                      "semantic_evidence": [], "geometry_evidence": [],
+                      "geometry_status": "not_applicable" if state in {"proposed", "rejected"} else "pending"}
             reports.append(report)
             if state in {"proposed", "rejected"}:
                 report["reason"] = "Hypothesis or rejected relation is not an execution dependency"
@@ -248,12 +271,11 @@ class Planner:
             source, target = nodes[edge.source_id], nodes[edge.target_id]
             spec = self.registry.get(target.operator)
             source_spec = self.registry.get(source.operator)
+            relation = self.registry.relations.get(edge.relation)
             reason = None
-            declared_relations = {relation for slot in spec.input_slots.values()
-                                  for relation in (slot.relations or ())} if spec is not None else set()
-            if edge.relation not in EXECUTION_RELATIONS and edge.relation not in declared_relations:
+            if relation is None:
                 report.update(status="proposed", lifecycle="proposed", geometry_status="not_applicable",
-                              reason="Unknown semantic relation retained as a hypothesis; not executable")
+                              reason="Unknown semantic relation retained as a hypothesis; no registered validator")
                 continue
             if source_spec is None or spec is None:
                 reason = "Dependency operator has no registered contract"
@@ -274,21 +296,30 @@ class Planner:
                 elif port not in spec.input_slots:
                     reason = f"Unknown input port: {port}"
                 elif port not in choices:
-                    reason = f"Input port {port} does not accept {source.kind}"
+                    reason = f"Input port {port} does not accept {source.kind} or relation {edge.relation}"
                 if reason is None:
-                    slot = spec.input_slots[port]
-                    existing = bindings[target.id].setdefault(port, [])
-                    if source.id in existing or (existing and not slot.multiple):
-                        reason = f"Duplicate dependency binding on {target.id}.{port}"
+                    evidence = self.registry.relations.validate_contract(
+                        edge, source, target, {"scene": self.scene, "input_port": port,
+                                              "output_port": report["output_port"]})
+                    report["semantic_evidence"] = evidence
+                    failed = [check for check in evidence if not check["passed"]]
+                    if failed:
+                        reason = failed[0].get("reason", "Semantic relation validator failed")
                     else:
-                        existing.append(source.id)
-                        report["input_port"] = port
+                        slot = spec.input_slots[port]
+                        existing = bindings[target.id].setdefault(port, [])
+                        if source.id in existing or (existing and not slot.multiple):
+                            reason = f"Duplicate dependency binding on {target.id}.{port}"
+                        else:
+                            existing.append(source.id)
+                            report["input_port"] = port
             if reason:
-                report.update(status="contract_rejected", lifecycle="contract_rejected",
+                report.update(status="contract_rejected", lifecycle="rejected",
                               geometry_status="not_checked", reason=reason)
-                errors.append({"node_id": target.id, "phase": "contract", "reason": reason})
+                errors.append({"node_id": target.id, "phase": "contract", "reason": reason,
+                               "dependency_index": index, "semantic_evidence": report["semantic_evidence"]})
             else:
-                report["reason"] = "Structural contract passed; execution and geometry gates are pending"
+                report["reason"] = "Semantic and structural contracts passed; execution and geometry gates are pending"
         for node in self.scene.nodes:
             spec = self.registry.get(node.operator)
             if spec is not None:
@@ -300,8 +331,7 @@ class Planner:
         executable_graph.dependencies = [self.scene.dependencies[report["index"]] for report in reports
                                          if report["status"] == "contract_validated"]
         order = topological_ids(executable_graph)
-        return Plan(order, bindings, reports, errors)
-
+        return Plan(order, bindings, reports, errors, self.registry.relations)
 
 def _canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
@@ -312,7 +342,8 @@ def _digest(value: Any) -> str:
 
 
 def node_signature(node: Node, spec: OperatorSpec, bindings: dict[str, list[str]],
-                   artifacts: dict[str, Artifact], dependency_reports: list[dict[str, Any]]) -> str:
+                   artifacts: dict[str, Artifact], dependency_reports: list[dict[str, Any]],
+                   external_inputs: dict[str, Any] | None = None) -> str:
     dependencies = []
     for report in dependency_reports:
         if report["target_id"] == node.id and report["status"] == "contract_validated":
@@ -322,11 +353,14 @@ def node_signature(node: Node, spec: OperatorSpec, bindings: dict[str, list[str]
                                  "relation": report["relation"],
                                  "result_id": artifacts[source_id]["_execution"]["result_id"]})
     dependencies.sort(key=lambda item: (item["input_port"], item["source_id"], item["output_port"]))
-    return _digest({"node_id": node.id, "kind": node.kind, "operator": spec.name,
+    payload = {"node_id": node.id, "kind": node.kind, "operator": spec.name,
                     "version": spec.version, "backend": spec.backend, "params": node.params,
                     "seed": node.seed, "bounds_xy": node.bounds_xy, "metadata": node.metadata,
                     "evidence_ids": node.evidence_ids, "input_bindings": bindings,
-                    "dependencies": dependencies})
+                    "dependencies": dependencies}
+    if external_inputs:
+        payload["external_inputs"] = external_inputs
+    return _digest(payload)
 
 
 def _check_output(node: Node, spec: OperatorSpec, artifact: Artifact) -> None:
@@ -362,10 +396,50 @@ def _predicate(check: Callable, args: tuple, label: str) -> dict[str, Any]:
     return report
 
 
+def _check_relation_geometry(result: RunResult, scene: Scene, plan: Plan,
+                             target_id: str | None = None) -> bool:
+    """Gate newly generated inputs before any downstream callable consumes them.
+
+    Evidence belongs to the current plan, never to a trusted serialized status.
+    The finish pass calls this again for any checks not ready during generation.
+    """
+    passed = True
+    for report in plan.dependency_reports:
+        if report["status"] != "contract_validated" or (target_id is not None and report["target_id"] != target_id):
+            continue
+        if not report.get("geometry_checked"):
+            edge = scene.dependencies[report["index"]]
+            if edge.source_id not in result.artifacts or edge.target_id not in result.artifacts:
+                continue
+            evidence = plan.relations.validate_geometry(
+                edge, scene.get_node(edge.source_id), scene.get_node(edge.target_id),
+                {"scene": scene, "artifacts": result.artifacts, "node_reports": result.node_reports,
+                 "constraint_reports": result.constraint_reports, "source_id": edge.source_id,
+                 "target_id": edge.target_id, "input_port": report["input_port"],
+                 "output_port": report["output_port"]})
+            report.update(geometry_evidence=evidence, geometry_checked=True)
+            failed = [check for check in evidence if not check["passed"]]
+            if failed:
+                failure = {"node_id": edge.target_id, "phase": "relation_geometry",
+                           "dependency_index": report["index"], "relation": edge.relation,
+                           "reason": failed[0].get("reason", "Required relation geometry failed"),
+                           "check_evidence": deepcopy(evidence)}
+                result.failures.append(failure)
+                for node_report in result.node_reports:
+                    if node_report.get("node_id") == edge.target_id:
+                        node_report.update(status="failed", phase="relation_geometry", reason=failure["reason"],
+                                           relation_evidence=deepcopy(evidence))
+        if any(not check["passed"] for check in report["geometry_evidence"]):
+            passed = False
+    return passed
+
+
 def _finish(result: RunResult, scene: Scene, plan: Plan | None) -> RunResult:
     result.scene = deepcopy(scene)
     followers = {node.id: set() for node in scene.nodes}
     if plan is not None:
+        _check_relation_geometry(result, scene, plan)
+        result.dependency_reports = deepcopy(plan.dependency_reports)
         for target, ports in plan.bindings.items():
             for sources in ports.values():
                 for source in sources:
@@ -386,8 +460,8 @@ def _finish(result: RunResult, scene: Scene, plan: Plan | None) -> RunResult:
     failed_nodes = {node_id for check in result.constraint_reports
                     if check["hard"] and not check["passed"] for node_id in check["nodes"]}
     failed_nodes.update(failure["node_id"] for failure in result.failures if "node_id" in failure)
-    # A late-ready check can fail only after descendants were generated. Such
-    # artifacts remain auditable, but are neither valid results nor reusable cache.
+    # Late-ready checks can fail after descendants were generated. Artifacts
+    # remain auditable, but failed descendants cannot become valid result cache.
     failed_nodes = affected(failed_nodes)
     for node_id, artifact in result.artifacts.items():
         artifact["_execution"]["validation_status"] = "failed" if node_id in failed_nodes else "passed"
@@ -395,7 +469,6 @@ def _finish(result: RunResult, scene: Scene, plan: Plan | None) -> RunResult:
                                                           if node_id in check["nodes"]
                                                           or node_id in failed_constraint_scopes.get(check["id"], ())]
     if plan is not None:
-        result.dependency_reports = deepcopy(plan.dependency_reports)
         for report in result.dependency_reports:
             edge = result.scene.dependencies[report["index"]]
             if report["status"] in {"proposed", "rejected"}:
@@ -414,20 +487,24 @@ def _finish(result: RunResult, scene: Scene, plan: Plan | None) -> RunResult:
             report["constraint_evidence"] = [deepcopy(check) for check in checks]
             failed_execution = any(failure.get("node_id") in (None, report["source_id"], report["target_id"])
                                    for failure in result.failures)
-            if ready and not failed_execution:
+            relation = plan.relations.get(edge.relation)
+            geometry_evidence = report["geometry_evidence"]
+            geometry_passed = all(check["passed"] for check in geometry_evidence)
+            if relation.geometry_required and not geometry_evidence:
+                geometry_passed = False
+            if ready and not failed_execution and geometry_passed:
                 report.update(status="executable", lifecycle="executable",
-                              geometry_status="passed" if checks else "not_required",
-                              reason="Contract, execution, postconditions and related hard constraints passed")
+                              geometry_status="passed" if geometry_evidence or checks else "not_required",
+                              reason="Semantic contract, execution, postconditions and required geometry gates passed")
                 edge.status = "executable"
             else:
                 report.update(status="validated", lifecycle="validated", geometry_status="failed_or_blocked",
                               blocked_by=sorted(failed_nodes.intersection(endpoints)),
-                              reason="Contract passed but a hard constraint, failed ancestor or incomplete execution blocks this dependency")
+                              reason="Validated contract is blocked by missing or failed execution/geometry evidence")
                 edge.status = "validated"
     if result.failures or any(check["hard"] and not check["passed"] for check in result.constraint_reports):
         result.status = "failed"
     return result
-
 
 def execute(scene: Scene, previous: dict[str, Artifact] | RunResult | None = None,
             changed_ids: set[str] | None = None, registry: OperatorRegistry | None = None,
@@ -479,8 +556,13 @@ def execute(scene: Scene, previous: dict[str, Artifact] | RunResult | None = Non
             phase = "precondition"
             pre_reports = [_predicate(check, (node, inputs, local_context), "Precondition")
                            for check in spec.preconditions]
+            phase = "external_inputs"
+            declarations = (spec.external_inputs(node, inputs, local_context)
+                            if callable(spec.external_inputs) else (spec.external_inputs or {}))
+            paths, identities = resolve_external_inputs(declarations, local_context.get("external_input_base_dir"))
+            local_context.update(external_input_paths=paths, external_input_identities=identities)
             phase = "signature"
-            signature = node_signature(node, spec, bindings, result.artifacts, plan.dependency_reports)
+            signature = node_signature(node, spec, bindings, result.artifacts, plan.dependency_reports, identities)
             local_context["signature"] = signature
             candidate = old.get(node_id)
             cached_metadata = candidate.get("_execution") if isinstance(candidate, dict) else None
@@ -512,6 +594,11 @@ def execute(scene: Scene, previous: dict[str, Artifact] | RunResult | None = Non
             _check_output(node, spec, artifact)
             post_reports = [_predicate(check, (node, artifact, inputs, local_context), "Postcondition")
                             for check in spec.postconditions]
+            if paths:
+                phase = "external_inputs"
+                _, after_identities = resolve_external_inputs(paths)
+                if after_identities != identities:
+                    raise ValueError("External inputs changed during node execution: "+node_id)
             if not reuse:
                 artifact = deepcopy(artifact)
                 artifact.pop("_execution", None)
@@ -519,6 +606,8 @@ def execute(scene: Scene, previous: dict[str, Artifact] | RunResult | None = Non
                 artifact["_execution"] = {"signature": signature, "result_id": result_id,
                                            "node_id": node_id, "operator": spec.name,
                                            "version": spec.version, "backend": spec.backend}
+                if identities:
+                    artifact["_execution"]["external_inputs"] = deepcopy(identities)
             result.artifacts[node_id] = artifact
             (result.preserved_ids if reuse else result.rebuilt_ids).append(node_id)
             result.node_reports.append({"node_id": node_id, "operator": spec.name,
@@ -531,6 +620,9 @@ def execute(scene: Scene, previous: dict[str, Artifact] | RunResult | None = Non
                                                            "output_contract": "passed", "passed": True,
                                                            "evidence": post_reports},
                                         "seconds": time.monotonic() - started})
+            phase = "relation_geometry"
+            if not _check_relation_geometry(result, scene, plan, node_id):
+                blocked.add(node_id)
             phase = "constraint"
             result.constraint_reports = _ready_checks(scene, result.artifacts)
             blocked.update(node_id for check in result.constraint_reports if check["hard"] and not check["passed"]

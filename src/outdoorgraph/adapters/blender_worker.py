@@ -36,8 +36,11 @@ def tag(obj, node_id, object_id, generator, config):
     obj["og_config"] = json.dumps(config, sort_keys=True)
 
 
-def load_surface(node, asset, reference, bundle_dir):
-    with np.load(local_path(asset["uri"], bundle_dir), allow_pickle=False) as data:
+def load_surface(node, asset, reference, bundle_dir, resolved_inputs=None):
+    resolved_inputs = resolved_inputs or {}
+    geometry_path = resolved_inputs.get("geometry") or local_path(asset["uri"], bundle_dir)
+    image_path = resolved_inputs.get("reference_image") or local_path(reference["uri"], bundle_dir)
+    with np.load(geometry_path, allow_pickle=False) as data:
         vertices = np.asarray(data["vertices"], dtype=np.float64)
         faces = np.asarray(data["faces"], dtype=np.int64)
         uv = np.asarray(data["uv"], dtype=np.float64)
@@ -83,9 +86,14 @@ def load_surface(node, asset, reference, bundle_dir):
     if not allowed.any():
         raise ValueError("Manual region contains no fully selected mesh triangles")
 
-    image = bpy.data.images.load(str(local_path(reference["uri"], bundle_dir)), check_existing=True)
+    # Each rebuilt node owns fresh pixels, even when an older BLEND contains a
+    # packed image at the same filepath. Never reload a preserved node's image.
+    image = bpy.data.images.load(str(image_path), check_existing=False)
+    image.name = "og:" + node["id"] + ":reference_image"
+    image["og_node_id"] = node["id"]
+    image["og_input_role"] = "reference_image"
     image.pack()
-    material = bpy.data.materials.new("MoGeReferenceTexture")
+    material = bpy.data.materials.new("og:" + node["id"] + ":reference_material")
     material.use_nodes = True
     shader = material.node_tree.nodes.get("Principled BSDF")
     texture = material.node_tree.nodes.new("ShaderNodeTexImage")

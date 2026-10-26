@@ -109,8 +109,12 @@ def test_make_bundle_preserves_declared_dependency_and_manual_provenance(config_
     assert grass.params["density"] == 2.0
     assert grass.params["target_instances"] == 4
     assert grass.seed == surface.seed == 91
-    assert [(edge.source_id, edge.target_id) for edge in bundle.scene.valid_edges()] == [
+    # Authoring does not confer execution permission. The real Blender adapter
+    # performs and records explicit contract/semantic validation before execution.
+    assert [(edge.source_id, edge.target_id) for edge in bundle.scene.dependencies] == [
         ("moge_surface", "infinigen_grass")]
+    assert bundle.scene.dependencies[0].status == "proposed"
+    assert bundle.scene.valid_edges() == []
     assert bundle.regions[0]["source"] == "manual"
     assert bundle.provenance["automatic_region_inference"] is False
     assert bundle.provenance["moge"]["commit"] == worker_report["commit"]

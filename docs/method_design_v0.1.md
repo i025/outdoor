@@ -25,7 +25,7 @@
 ## 3. Scene representation
 
 - **Node:** stable ID, semantic kind, generator operator, typed/physical parameters, bounds, deterministic seed, evidence references, optional hypothesis metadata.
-- **Dependency:** directed producer→consumer relation with confidence and status `proposed`, `validated`, `executable`, `rejected`. In v0.2.1 legacy validated declarations are rechecked against contracts; runtime postconditions and related hard constraints determine executable status. A hypothesized edge is *not* asserted to be a true causal relation.
+- **Dependency:** directed producer→consumer relation with confidence and status `proposed`, `validated`, `executable`, `rejected`. In v0.2.1 new edges default to proposed; explicit validation uses an extensible RelationSpec registry. Legacy validated declarations are rechecked against semantic contracts; runtime postconditions and related hard constraints determine executable status. A hypothesized edge is *not* asserted to be a true causal relation.
 - **Constraint:** spatial/topological rule evaluated over generated artifacts, with node references, thresholds/units, and hard/soft designation. Constraints can involve multiple regions.
 - **Evidence:** image, camera, depth, manual or derived source; `observed/inferred/generated` status and uncertainty. A reference view anchors observed constraints; hidden regions may have competing valid hypotheses.
 - **Scene world:** local metric frame, z-up, stable IDs and explicit coordinate conversions at adapter boundaries.

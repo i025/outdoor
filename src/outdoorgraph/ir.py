@@ -37,7 +37,7 @@ class Dependency:
     target_id: str
     relation: str
     confidence: float = 1.0
-    status: str = "validated"  # proposed, validated, executable, rejected
+    status: str = "proposed"  # proposed, validated, executable, rejected
     evidence_ids: list[str] = field(default_factory=list)
     input_port: str | None = None
     output_port: str | None = None

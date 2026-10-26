@@ -26,6 +26,7 @@ from outdoorgraph.adapters.graph_backend_data import (
     allowed_region_faces, heightfield_mesh, instance_owner, ribbon_xy,
 )
 from outdoorgraph.execution import InputSlot, OperatorSpec, Planner, execute, proxy_registry
+from outdoorgraph.external_inputs import external_input_path
 from outdoorgraph.ir import Scene
 from outdoorgraph.operators import building_proxy, distance_to_road, height_at, road_polyline
 
@@ -79,6 +80,9 @@ def remove_node_collection(node_id):
             for data in list(datablocks):
                 if data.users == 0:
                     datablocks.remove(data)
+    for image in list(bpy.data.images):
+        if image.get("og_node_id") == node_id and image.users == 0:
+            bpy.data.images.remove(image)
 
 
 def tagged(obj, node, role, generator, signature):
@@ -305,6 +309,16 @@ class BlenderSession:
         artifact["surface_node_id"] = terrain_id
         return self.finish_artifact(node, artifact, context)
 
+    def external_inputs(self, node, inputs, context):
+        if node.operator != "external.moge.mesh":
+            return {}
+        bundle = self.request["bundle"]
+        assets = {asset["id"]: asset for asset in bundle["assets"]}
+        base = Path(self.request["bundle_path"]).resolve().parent
+        image_id = node.params.get("source_image_asset_id", "reference_image")
+        return {"geometry": external_input_path(assets[node.params["asset_id"]]["uri"], base),
+                "reference_image": external_input_path(assets[image_id]["uri"], base)}
+
     def external_mesh(self, node, inputs, context):
         from outdoorgraph.adapters.blender_worker import load_surface
         self.begin(node, context)
@@ -312,7 +326,8 @@ class BlenderSession:
         assets = {a["id"]: a for a in bundle["assets"]}
         image_id = node.params.get("source_image_asset_id", "reference_image")
         obj, vertices, faces, allowed = load_surface(self.nodes[node.id], assets[node.params["asset_id"]],
-                                                    assets[image_id], Path(self.request["bundle_path"]).parent)
+                                                    assets[image_id], Path(self.request["bundle_path"]).parent,
+                                                    resolved_inputs=context["external_input_paths"])
         self.adopt(obj, node, "terrain", context, "external.moge.mesh")
         artifact = {"kind": "terrain", "params": {}, "bounds_xy": list(node.bounds_xy),
                     "external_mesh": True}
@@ -394,9 +409,19 @@ class BlenderSession:
         return self.finish_artifact(node, artifact, context)
 
     def check(self, node, artifact, inputs, context):
+        checks = []
         if artifact.get("kind") == "terrain":
             obj = object_for(node.id, "terrain")
             require(obj is not None and len(obj.data.polygons) > 0, "Terrain has no actual faces")
+            if "heightfield" in inputs:
+                vertices = world_mesh(obj)[0]
+                error = max(abs(p.z-height_at(inputs["heightfield"], p.x, p.y)) for p in vertices)
+                checks.append({"node_id": node.id, "source_id": context["input_bindings"]["heightfield"][0],
+                               "rule": "actual_heightfield_surface", "passed": error < 1e-4,
+                               "sample_count": len(vertices), "max_error_m": error, "tolerance_m": 1e-4})
+            else:
+                checks.append({"node_id": node.id, "rule": "actual_external_mesh", "passed": True,
+                               "vertex_count": len(obj.data.vertices), "face_count": len(obj.data.polygons)})
         else:
             terrain = object_for(artifact["surface_node_id"], "terrain")
             require(terrain is not None, "Missing actual support terrain")
@@ -404,17 +429,30 @@ class BlenderSession:
             if artifact["kind"] == "vegetation":
                 points = [i["position_xyz"] for i in instances_by_node().get(node.id, [])]
                 require(points, "Missing native GN instances")
-                for p in points:
-                    require(bvh.find_nearest(Vector(p))[3] < .02, "Native instance is off its actual terrain")
-                    for road in inputs.get("roads", []):
-                        require(distance_to_road(p[0], p[1], road)+1e-7 >= road["width_m"]/2+artifact["road_buffer_m"],
-                                "Native instance violates actual road clearance")
+                error = max(bvh.find_nearest(Vector(p))[3] for p in points)
+                checks.append({"node_id": node.id, "source_id": artifact["surface_node_id"],
+                               "rule": "actual_native_grass_contact", "passed": error < .02,
+                               "instances": len(points), "max_error_m": error, "tolerance_m": .02})
+                for road_id, road in zip(context["input_bindings"].get("roads", []), inputs.get("roads", [])):
+                    minimum = min(distance_to_road(p[0], p[1], road) for p in points)
+                    limit = road["width_m"]/2+artifact["road_buffer_m"]
+                    checks.append({"node_id": node.id, "source_id": road_id, "road_id": road_id,
+                                   "rule": "actual_grass_road_clearance", "passed": minimum+1e-7 >= limit,
+                                   "instances": len(points), "minimum_m": minimum, "required_m": limit})
             elif artifact["kind"] == "building":
-                require(bvh.find_nearest(Vector(artifact["position_xyz"]))[3] < .02, "Object is off its actual terrain")
+                obj = object_for(node.id, "object")
+                bottom = obj.matrix_world @ Vector((0, 0, -.5))
+                error = bvh.find_nearest(bottom)[3]
+                checks.append({"node_id": node.id, "source_id": artifact["surface_node_id"],
+                               "rule": "actual_object_bottom_contact", "passed": error < .02,
+                               "max_error_m": error, "tolerance_m": .02})
             elif artifact["kind"] == "road":
                 require(object_for(node.id, "road") is not None, "Road has no actual mesh")
-                return road_mesh_contact(node.id, artifact, bvh, enforce=False)
-        return True
+                report = road_mesh_contact(node.id, artifact, bvh, enforce=False)
+                report["source_id"] = artifact["surface_node_id"]
+                return report
+        return {"passed": all(check["passed"] for check in checks), "checks": checks,
+                "reason": "Actual Blender geometry postconditions"}
 
 
 def backend_registry(session):
@@ -432,7 +470,8 @@ def backend_registry(session):
     for name, run, slots, outputs in specs:
         registry.register(OperatorSpec(name, run, slots, outputs, backend="blender",
                                        version="2:"+bpy.app.version_string+":"+str(session.infinigen_commit),
-                                       postconditions=(session.check,), cache_validator=session.valid_cache))
+                                       postconditions=(session.check,), cache_validator=session.valid_cache,
+                                       external_inputs=session.external_inputs))
     return registry
 
 
@@ -633,10 +672,16 @@ def export_graph_glb(out):
             bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def run_request(request, out, infinigen_source, request_path=None):
+def run_request(request, out, infinigen_source, request_path=None, validate_proposals=False):
     session = BlenderSession(request, out, infinigen_source, request_path)
     registry = backend_registry(session)
     scene = Scene.from_dict(request["scene"])
+    if validate_proposals:
+        admission = Planner(scene, registry).validate_dependencies()
+        write_json(session.out/"dependency_validation.json", admission.to_dict())
+        require(admission.passed, "Bundle dependency contract validation failed")
+        scene = admission.scene
+        request["scene"] = scene.to_dict()
     write_json(session.out/"request.json", request)
     plan = Planner(scene, registry).plan()
     write_json(session.out/"plan.json", plan.to_dict())
@@ -780,7 +825,9 @@ def run_bundle(bundle_path, out, infinigen_source):
     request = {"scene": bundle["scene"], "bundle": bundle, "bundle_path": str(bundle_path),
                "previous_artifacts": {}, "previous_blend": None,
                "render": {"width": 640, "height": 480, "samples": 16}}
-    return run_request(request, out, infinigen_source)
+    # The explicit legacy bundle entry point performs a separately recorded
+    # contract validation stage. Generic graph requests never promote proposals.
+    return run_request(request, out, infinigen_source, validate_proposals=True)
 
 
 def main():

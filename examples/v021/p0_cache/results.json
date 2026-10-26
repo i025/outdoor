@@ -1,0 +1,157 @@
+{
+  "fixture": "Authored MoGe-format NPZ planes; no model inference",
+  "test": "tests/test_blender_external_inputs.py",
+  "native_generator": "Infinigen GrassTuftFactory and scatter_instances",
+  "seed": 19,
+  "density": 2,
+  "asset_count": 1,
+  "scale": 1,
+  "stages": {
+    "baseline": {
+      "passed": true,
+      "status": "completed",
+      "rebuilt_ids": [
+        "surface_main",
+        "surface_other",
+        "sky",
+        "native_plants"
+      ],
+      "preserved_ids": [],
+      "reopened": true,
+      "actual_nodes": 3,
+      "actual_instances": 32,
+      "main_packed_pixel_rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "main_mesh_z_m": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "other_packed_pixel_rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "unchanged": {
+      "passed": true,
+      "status": "completed",
+      "rebuilt_ids": [],
+      "preserved_ids": [
+        "surface_main",
+        "surface_other",
+        "sky",
+        "native_plants"
+      ],
+      "reopened": true,
+      "actual_nodes": 3,
+      "actual_instances": 32,
+      "main_packed_pixel_rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "main_mesh_z_m": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "other_packed_pixel_rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "texture": {
+      "passed": true,
+      "status": "completed",
+      "rebuilt_ids": [
+        "surface_main",
+        "native_plants"
+      ],
+      "preserved_ids": [
+        "surface_other",
+        "sky"
+      ],
+      "reopened": true,
+      "actual_nodes": 3,
+      "actual_instances": 32,
+      "main_packed_pixel_rgba": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "main_mesh_z_m": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "other_packed_pixel_rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "geometry": {
+      "passed": true,
+      "status": "completed",
+      "rebuilt_ids": [
+        "surface_main",
+        "native_plants"
+      ],
+      "preserved_ids": [
+        "surface_other",
+        "sky"
+      ],
+      "reopened": true,
+      "actual_nodes": 3,
+      "actual_instances": 32,
+      "main_packed_pixel_rgba": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "main_mesh_z_m": [
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "other_packed_pixel_rgba": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "missing": {
+      "passed": false,
+      "status": "failed",
+      "rebuilt_ids": [],
+      "preserved_ids": [
+        "surface_other",
+        "sky"
+      ],
+      "failures": [
+        {
+          "node_id": "surface_main",
+          "phase": "external_inputs",
+          "error_type": "FileNotFoundError"
+        }
+      ]
+    }
+  }
+}
