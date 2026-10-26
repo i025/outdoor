@@ -1,0 +1,45 @@
+{
+  "blender": {
+    "executable": "/path/to/infinigen/blender/blender",
+    "infinigen_source": "/path/to/infinigen/source",
+    "python_site_packages": "/path/to/infinigen/.venv/lib/python3.10/site-packages"
+  },
+  "render": {
+    "width": 640,
+    "height": 480,
+    "samples": 16,
+    "camera_location": [
+      16.8,
+      -16,
+      25.2
+    ],
+    "camera_target": [
+      12,
+      8,
+      0
+    ],
+    "ortho_scale": 28.32
+  },
+  "edits": [
+    {
+      "name": "terrain_edit",
+      "node_id": "upland_profile",
+      "params": {
+        "local_bump": {
+          "profile": "compact",
+          "x": 6,
+          "y": 8,
+          "radius_m": 4,
+          "amplitude_m": 1.2
+        }
+      }
+    },
+    {
+      "name": "road_edit",
+      "node_id": "access_track",
+      "params": {
+        "width_m": 2.8
+      }
+    }
+  ]
+}

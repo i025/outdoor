@@ -1,0 +1,452 @@
+{
+  "schema_version": "0.1",
+  "id": "unified_meadow_edits",
+  "world": {
+    "units": "m",
+    "axis": "z_up",
+    "bounds_xy": [
+      0,
+      0,
+      24,
+      16
+    ]
+  },
+  "evidence": [
+    {
+      "id": "authored_experiment",
+      "modality": "manual",
+      "source": "Hand-authored dependency editing experiment; not image reconstruction or agent induction",
+      "confidence": 1.0,
+      "status": "generated"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "upland_profile",
+      "kind": "terrain",
+      "operator": "terrain.heightfield",
+      "params": {
+        "base_height_m": 0,
+        "local_bump": {
+          "profile": "compact",
+          "x": 6,
+          "y": 8,
+          "radius_m": 4,
+          "amplitude_m": 0
+        }
+      },
+      "bounds_xy": [
+        0,
+        0,
+        12,
+        16
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "lowland_profile",
+      "kind": "terrain",
+      "operator": "terrain.heightfield",
+      "params": {
+        "base_height_m": 0
+      },
+      "bounds_xy": [
+        12,
+        0,
+        24,
+        16
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "west_ground",
+      "kind": "terrain",
+      "operator": "blender.terrain",
+      "params": {
+        "grid_spacing_m": 0.25,
+        "color": [
+          0.24,
+          0.32,
+          0.12,
+          1
+        ]
+      },
+      "bounds_xy": [
+        0,
+        0,
+        12,
+        16
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "east_ground",
+      "kind": "terrain",
+      "operator": "blender.terrain",
+      "params": {
+        "grid_spacing_m": 0.25,
+        "color": [
+          0.24,
+          0.32,
+          0.12,
+          1
+        ]
+      },
+      "bounds_xy": [
+        12,
+        0,
+        24,
+        16
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "access_track",
+      "kind": "road",
+      "operator": "blender.road",
+      "params": {
+        "control_points_xy": [
+          [
+            2,
+            1
+          ],
+          [
+            5,
+            6
+          ],
+          [
+            6,
+            10
+          ],
+          [
+            10,
+            15
+          ]
+        ],
+        "width_m": 1.1,
+        "sample_spacing_m": 0.2,
+        "height_offset_m": 0.015,
+        "color": [
+          0.4,
+          0.28,
+          0.14,
+          1
+        ]
+      },
+      "bounds_xy": [
+        0,
+        0,
+        12,
+        16
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "meadow",
+      "kind": "vegetation",
+      "operator": "blender.grass",
+      "params": {
+        "density": 0.35,
+        "scale": 2.0,
+        "asset_count": 1,
+        "road_buffer_m": 0.6
+      },
+      "bounds_xy": [
+        0.5,
+        0.5,
+        11.5,
+        15.5
+      ],
+      "seed": 123,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "remote_meadow",
+      "kind": "vegetation",
+      "operator": "blender.grass",
+      "params": {
+        "density": 0.3,
+        "scale": 2.0,
+        "asset_count": 1,
+        "road_buffer_m": 0.6
+      },
+      "bounds_xy": [
+        12.5,
+        0.5,
+        23.5,
+        15.5
+      ],
+      "seed": 456,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "wayside_shelter",
+      "kind": "building",
+      "operator": "blender.object",
+      "params": {
+        "position_xy": [
+          8,
+          8
+        ],
+        "size_m": [
+          1.5,
+          1.5,
+          1.8
+        ],
+        "color": [
+          0.55,
+          0.29,
+          0.13,
+          1
+        ]
+      },
+      "bounds_xy": [
+        7,
+        7,
+        9,
+        9
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    },
+    {
+      "id": "sky_tint",
+      "kind": "background",
+      "operator": "background.constant",
+      "params": {
+        "color": "#a1c7e4"
+      },
+      "bounds_xy": [
+        0,
+        0,
+        24,
+        16
+      ],
+      "seed": 17,
+      "evidence_ids": [
+        "authored_experiment"
+      ],
+      "metadata": {
+        "source": "configured editing experiment",
+        "editable": true
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "source_id": "upland_profile",
+      "target_id": "west_ground",
+      "relation": "samples_terrain_height",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "heightfield"
+    },
+    {
+      "source_id": "lowland_profile",
+      "target_id": "east_ground",
+      "relation": "samples_terrain_height",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "heightfield"
+    },
+    {
+      "source_id": "west_ground",
+      "target_id": "access_track",
+      "relation": "samples_terrain_height",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "terrain"
+    },
+    {
+      "source_id": "west_ground",
+      "target_id": "meadow",
+      "relation": "samples_terrain_height",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "terrain"
+    },
+    {
+      "source_id": "access_track",
+      "target_id": "meadow",
+      "relation": "road_exclusion_buffer",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "roads"
+    },
+    {
+      "source_id": "east_ground",
+      "target_id": "remote_meadow",
+      "relation": "samples_terrain_height",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "terrain"
+    },
+    {
+      "source_id": "west_ground",
+      "target_id": "wayside_shelter",
+      "relation": "supported_by_terrain",
+      "status": "validated",
+      "confidence": 1.0,
+      "input_port": "terrain"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "terrain_seam",
+      "rule": "terrain_continuity",
+      "node_ids": [
+        "west_ground",
+        "east_ground"
+      ],
+      "params": {
+        "tolerance_m": 0.0001,
+        "sample_spacing_m": 0.25
+      },
+      "hard": true
+    },
+    {
+      "id": "track_contact",
+      "rule": "road_contact",
+      "node_ids": [
+        "access_track",
+        "west_ground"
+      ],
+      "params": {
+        "tolerance_m": 0.025,
+        "sample_spacing_m": 0.1
+      },
+      "hard": true
+    },
+    {
+      "id": "track_grade",
+      "rule": "road_grade",
+      "node_ids": [
+        "access_track"
+      ],
+      "params": {
+        "max_grade": 1.0
+      },
+      "hard": true
+    },
+    {
+      "id": "track_topology",
+      "rule": "road_topology",
+      "node_ids": [
+        "access_track"
+      ],
+      "params": {
+        "required_endpoints_xy": [
+          [
+            2,
+            1
+          ],
+          [
+            10,
+            15
+          ]
+        ],
+        "tolerance_m": 0.001
+      },
+      "hard": true
+    },
+    {
+      "id": "shelter_contact",
+      "rule": "ground_contact",
+      "node_ids": [
+        "wayside_shelter",
+        "west_ground"
+      ],
+      "params": {
+        "tolerance_m": 0.025
+      },
+      "hard": true
+    },
+    {
+      "id": "meadow_clearance",
+      "rule": "vegetation_road_clearance",
+      "node_ids": [
+        "meadow",
+        "access_track"
+      ],
+      "params": {
+        "buffer_m": 0.6
+      },
+      "hard": true
+    },
+    {
+      "id": "meadow_population",
+      "rule": "vegetation_min_count",
+      "node_ids": [
+        "meadow"
+      ],
+      "params": {
+        "min_count": 10
+      },
+      "hard": true
+    },
+    {
+      "id": "remote_population",
+      "rule": "vegetation_min_count",
+      "node_ids": [
+        "remote_meadow"
+      ],
+      "params": {
+        "min_count": 10
+      },
+      "hard": true
+    }
+  ]
+}

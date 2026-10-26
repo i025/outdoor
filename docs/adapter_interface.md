@@ -112,3 +112,11 @@ GLB 使用 `export_extras=True` 保留导出对象的同类字段。
 后续研究依次为：自动区域和重力证据 → 机制假设及置信度 → 显式验证可执行依赖 →
 联合相机/几何/生成参数优化及改动范围控制。v0.2 仅完成数据通路和真实执行，
 没有实现自动程序归纳、完整三维补全、多视角重建或全局一致性优化。
+
+## Unified executable graph (v0.2.1)
+
+The existing bundle/CLI remains compatible. Blender execution now delegates to the
+same Planner as proxy runtime; program IDs come from Scene IR. Typed ports,
+explicit proposal validation, automatic cache invalidation and per-node native
+collections are described in [execution_api.md](execution_api.md). The real
+editing protocol/results are in [integration_validation_v0.2.1.md](integration_validation_v0.2.1.md).

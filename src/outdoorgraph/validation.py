@@ -13,6 +13,8 @@ _CONSTRAINT_NODE_COUNTS = {
     "road_grade": 1,
     "vegetation_road_clearance": 2,
     "vegetation_min_count": 1,
+    "terrain_continuity": 2,
+    "road_topology": 1,
 }
 
 
@@ -46,7 +48,7 @@ def topological_ids(scene: Scene) -> list[str]:
     return order
 
 
-def validate_scene(scene: Scene) -> None:
+def validate_scene(scene: Scene, check_cycles: bool = True) -> None:
     if scene.schema_version != "0.1":
         raise SceneValidationError("Unsupported schema version")
     if scene.world.get("units") != "m" or scene.world.get("axis") != "z_up":
@@ -76,8 +78,11 @@ def validate_scene(scene: Scene) -> None:
             raise SceneValidationError("Dependency points to a missing node")
         if not math.isfinite(edge.confidence) or not 0 <= edge.confidence <= 1:
             raise SceneValidationError("Invalid dependency confidence")
-        if edge.status not in {"proposed", "validated", "rejected"}:
+        if edge.status not in {"proposed", "validated", "executable", "rejected"}:
             raise SceneValidationError("Invalid dependency status")
+        for port in (edge.input_port, edge.output_port):
+            if port is not None and (not isinstance(port, str) or not port.strip()):
+                raise SceneValidationError("Dependency ports must be non-empty strings")
         for item in edge.evidence_ids:
             if item not in ev_ids:
                 raise SceneValidationError("Missing dependency evidence")
@@ -97,4 +102,5 @@ def validate_scene(scene: Scene) -> None:
         for item in constraint.evidence_ids:
             if item not in ev_ids:
                 raise SceneValidationError(f"Missing constraint evidence: {constraint.id}")
-    topological_ids(scene)
+    if check_cycles:
+        topological_ids(scene)

@@ -29,8 +29,18 @@ python -m pip install -e '.[dev]'
 ```
 
 两个方法任选其一。后续会话只需激活现有环境。
-本次核心验证使用 Python **3.11.16**、pytest **9.1.1**，共 **110 项 pytest 通过**。
-默认 pytest 不加载 NumPy、模型、GPU 或 Blender。
+本次核心验证使用 Python **3.11.16**、pytest **9.1.1**，默认 **207 项核心测试通过**；另有 **9 项真实 Blender 回归**，需显式提供后端配置。
+默认 pytest 不加载 NumPy、模型、GPU 或 Blender，真实后端测试会明确跳过。
+
+```bash
+cp configs/unified_blender.json configs/unified_blender.local.json
+# 填入既有 Blender / Infinigen / Python site-packages 路径。
+OUTDOORGRAPH_BLENDER_CONFIG="$PWD/configs/unified_blender.local.json" python -m pytest -q
+```
+
+本次完整验收为 **216 passed，0 skipped**。后端直接运行同一 Planner 的源码兼容子集，
+已在 Blender 内置 Python 3.10.12 与外部 Python 3.10.22 验证；主包仍声明 Python >=3.11。
+完整实测见 [v0.2.1 验证报告](integration_validation_v0.2.1.md)。
 额外的 5 项几何数值单测在已有 MoGe 环境中显式运行：
 
 ```bash

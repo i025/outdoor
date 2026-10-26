@@ -18,3 +18,10 @@ backend. Renderer-specific state remains outside the core Scene IR:
 Stable metric z-up coordinates, IDs, seeds, camera conventions, manual evidence
 and upstream provenance are required. City/planner/alternative geometry backends
 remain separate plans; they are not silently included by this integration.
+
+## Unified v0.2.1 execution
+
+`graph_pipeline.py` launches the existing backend; `graph_blender_worker.py` imports
+the same Planner and registers native operators. The legacy `blender_worker.py` CLI
+bridges to that registry. See [execution API](../../../docs/execution_api.md) and
+[real editing validation](../../../docs/integration_validation_v0.2.1.md).

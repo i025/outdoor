@@ -201,11 +201,13 @@ def verify_outputs(out: Path) -> dict[str, Any]:
         width, height = png_dimensions(backend / name)
         if (width, height) != (manifest["render_width"], manifest["render_height"]):
             raise ValueError("Render dimensions disagree with backend manifest")
-    ids = [o["id"] for o in manifest["objects"]]
-    if len(ids) != len(set(ids)) or not any(o["node_id"] == "moge_surface" for o in manifest["objects"]):
-        raise ValueError("Missing or duplicate stable object IDs")
     bundle = SceneBundle.load(out / "scene_bundle.json")
-    if json.loads((out / "scene_ir.json").read_text()) != bundle.scene.to_dict():
+    surface_ids = {node.id for node in bundle.scene.nodes if node.operator == "external.moge.mesh"}
+    ids = [o["id"] for o in manifest["objects"]]
+    if len(ids) != len(set(ids)) or not any(o["node_id"] in surface_ids for o in manifest["objects"]):
+        raise ValueError("Missing or duplicate stable object IDs")
+    saved_scene = Scene.from_dict(json.loads((out / "scene_ir.json").read_text()))
+    if saved_scene.to_dict() != bundle.scene.to_dict():
         raise ValueError("Scene IR differs from the execution bundle")
     with zipfile.ZipFile(out / "geometry/moge_raw.npz") as raw:
         if not {"points.npy", "depth.npy", "intrinsics.npy", "mask.npy"}.issubset(raw.namelist()) or raw.testzip():

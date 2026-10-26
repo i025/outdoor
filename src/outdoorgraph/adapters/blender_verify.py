@@ -59,15 +59,19 @@ def check_tagged_objects(objects, nodes):
     require(len(ids) == len(set(ids)), "Duplicate saved object IDs")
     require(all(isinstance(value, str) and value for value in ids), "Invalid saved object ID")
     found = {}
-    for node_id in ("moge_surface", "infinigen_grass"):
+    for node_id, node in nodes.items():
+        if node["operator"] not in {"external.moge.mesh", "external.infinigen.grass"}:
+            continue
         matches = [obj for obj in tagged if obj.get("og_node_id") == node_id]
         require(matches, "Missing saved node objects: " + node_id)
         for obj in matches:
             require(bool(obj.get("og_generator")), "Missing saved generator on " + obj.name)
             expected = dict(nodes[node_id]["params"])
-            if node_id == "infinigen_grass":
+            if nodes[node_id]["operator"] == "external.infinigen.grass":
                 expected["seed"] = int(nodes[node_id].get("seed", 2026))
-            require(json.loads(obj["og_config"]) == expected, "Saved node configuration mismatch: " + obj.name)
+            configuration = json.loads(obj["og_config"])
+            unified = {"params": nodes[node_id]["params"], "seed": int(nodes[node_id].get("seed", 0))}
+            require(configuration in (expected, unified), "Saved node configuration mismatch: " + obj.name)
             provenance_of(obj, nodes[node_id])
         found[node_id] = matches
     return tagged, found
@@ -93,10 +97,16 @@ def audit(bundle_path, out):
 
     tagged, found = check_tagged_objects(bpy.data.objects, nodes)
     manifest = json.loads((out / "objects.json").read_text(encoding="utf-8"))
-    require({obj["og_object_id"] for obj in tagged} == {obj["id"] for obj in manifest["objects"]},
+    program_ids = set(found)
+    require({obj["og_object_id"] for obj in tagged if obj.get("og_node_id") in program_ids}
+            == {obj["id"] for obj in manifest["objects"] if obj["node_id"] in program_ids},
             "Reopened object IDs differ from the generation manifest")
-    surface = next((obj for obj in found["moge_surface"] if obj.type == "MESH"), None)
-    scatter = next((obj for obj in found["infinigen_grass"] if any(m.type == "NODES" for m in obj.modifiers)), None)
+    surface_ids = [key for key, node in nodes.items() if node["operator"] == "external.moge.mesh"]
+    grass_ids = [key for key, node in nodes.items() if node["operator"] == "external.infinigen.grass"]
+    require(len(surface_ids) == 1 and len(grass_ids) == 1, "Reference-view audit requires one surface and one grass program")
+    surface_id, grass_id = surface_ids[0], grass_ids[0]
+    surface = next((obj for obj in found[surface_id] if obj.type == "MESH"), None)
+    scatter = next((obj for obj in found[grass_id] if any(m.type == "NODES" for m in obj.modifiers)), None)
     require(surface is not None and scatter is not None, "Missing reconstructed mesh or native Geometry Nodes scatter")
     require(len(surface.data.vertices) > 0 and len(surface.data.polygons) > 0, "Reopened surface is empty")
 
@@ -140,7 +150,7 @@ def audit(bundle_path, out):
     contact_error = max(distances)
     require(contact_error < tolerance, "Actual instance surface-contact error exceeds 1e-3 m: " + str(contact_error))
 
-    region_id = nodes["infinigen_grass"]["params"]["region_id"]
+    region_id = nodes[grass_id]["params"]["region_id"]
     region = next(item for item in bundle["regions"] if item["id"] == region_id)
     require(region["source"] == "manual", "Expected explicit manual region provenance")
     _, region_pixels = decode_image(local_path(region["uri"], bundle_path.parent),

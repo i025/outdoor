@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1005" height="400" viewBox="0 0 1005 400">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#65748a"/></marker></defs>
+<rect width="100%" height="100%" fill="#f6f8fb"/>
+<text x="25" y="25" font-family="sans-serif" font-size="15">Orange: executed / Blue: cache reused / Dashed: hypothesis</text>
+<path d="M240,84 C265,84 255,84 280,84" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<path d="M240,199 C265,199 255,199 280,199" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<path d="M485,84 C510,84 500,84 525,84" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<path d="M485,70 C515,20 745,20 770,70" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<path d="M730,84 C755,84 745,84 770,84" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<path d="M485,199 C510,199 500,199 525,199" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<path d="M485,84 C510,84 500,314 525,314" fill="none" stroke="#65748a" marker-end="url(#arrow)"/>
+<rect x="35" y="55" width="205" height="62" rx="8" fill="#fff0d7" stroke="#7c8b9d"/>
+<text x="44" y="78" font-family="sans-serif" font-size="13">upland_profile</text>
+<text x="44" y="100" font-family="monospace" font-size="11">terrain.heightfield</text>
+<rect x="35" y="170" width="205" height="62" rx="8" fill="#dcecff" stroke="#7c8b9d"/>
+<text x="44" y="193" font-family="sans-serif" font-size="13">lowland_profile</text>
+<text x="44" y="215" font-family="monospace" font-size="11">terrain.heightfield</text>
+<rect x="280" y="55" width="205" height="62" rx="8" fill="#fff0d7" stroke="#7c8b9d"/>
+<text x="289" y="78" font-family="sans-serif" font-size="13">west_ground</text>
+<text x="289" y="100" font-family="monospace" font-size="11">blender.terrain</text>
+<rect x="280" y="170" width="205" height="62" rx="8" fill="#dcecff" stroke="#7c8b9d"/>
+<text x="289" y="193" font-family="sans-serif" font-size="13">east_ground</text>
+<text x="289" y="215" font-family="monospace" font-size="11">blender.terrain</text>
+<rect x="525" y="55" width="205" height="62" rx="8" fill="#fff0d7" stroke="#7c8b9d"/>
+<text x="534" y="78" font-family="sans-serif" font-size="13">access_track</text>
+<text x="534" y="100" font-family="monospace" font-size="11">blender.road</text>
+<rect x="770" y="55" width="205" height="62" rx="8" fill="#fff0d7" stroke="#7c8b9d"/>
+<text x="779" y="78" font-family="sans-serif" font-size="13">meadow</text>
+<text x="779" y="100" font-family="monospace" font-size="11">blender.grass</text>
+<rect x="525" y="170" width="205" height="62" rx="8" fill="#dcecff" stroke="#7c8b9d"/>
+<text x="534" y="193" font-family="sans-serif" font-size="13">remote_meadow</text>
+<text x="534" y="215" font-family="monospace" font-size="11">blender.grass</text>
+<rect x="525" y="285" width="205" height="62" rx="8" fill="#fff0d7" stroke="#7c8b9d"/>
+<text x="534" y="308" font-family="sans-serif" font-size="13">wayside_shelter</text>
+<text x="534" y="330" font-family="monospace" font-size="11">blender.object</text>
+<rect x="35" y="285" width="205" height="62" rx="8" fill="#dcecff" stroke="#7c8b9d"/>
+<text x="44" y="308" font-family="sans-serif" font-size="13">sky_tint</text>
+<text x="44" y="330" font-family="monospace" font-size="11">background.constant</text>
+</svg>

@@ -37,8 +37,10 @@ class Dependency:
     target_id: str
     relation: str
     confidence: float = 1.0
-    status: str = "validated"  # proposed, validated, rejected
+    status: str = "validated"  # proposed, validated, executable, rejected
     evidence_ids: list[str] = field(default_factory=list)
+    input_port: str | None = None
+    output_port: str | None = None
 
 
 @dataclass
@@ -83,4 +85,5 @@ class Scene:
         raise KeyError(node_id)
 
     def valid_edges(self) -> list[Dependency]:
-        return [edge for edge in self.dependencies if edge.status == "validated"]
+        # Candidate runtime edges; the Planner must recheck contracts and gates.
+        return [edge for edge in self.dependencies if edge.status in {"validated", "executable"}]

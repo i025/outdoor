@@ -1,0 +1,645 @@
+{
+  "tests": {
+    "pytest_passed": 216,
+    "real_blender_tests": 9,
+    "failures": 0,
+    "skipped": 0,
+    "external_geometry_passed": 5
+  },
+  "stages": {
+    "initial": {
+      "passed": true,
+      "rebuilt_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "access_track",
+        "wayside_shelter",
+        "remote_meadow",
+        "meadow"
+      ],
+      "preserved_ids": [],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 3870,
+          "max_error_m": 0.015007629059255123,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 39,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 1.3282928721334255,
+          "required_m": 1.15
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 88,
+      "removed_backend_ids": []
+    },
+    "terrain_edit": {
+      "passed": true,
+      "rebuilt_ids": [
+        "upland_profile",
+        "west_ground",
+        "access_track",
+        "wayside_shelter",
+        "meadow"
+      ],
+      "preserved_ids": [
+        "lowland_profile",
+        "sky_tint",
+        "east_ground",
+        "remote_meadow"
+      ],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 3870,
+          "max_error_m": 0.020846867933869362,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 40,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 1.3282928721334255,
+          "required_m": 1.15
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 89,
+      "removed_backend_ids": []
+    },
+    "road_edit": {
+      "passed": true,
+      "rebuilt_ids": [
+        "access_track",
+        "meadow"
+      ],
+      "preserved_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "wayside_shelter",
+        "remote_meadow"
+      ],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 9169,
+          "max_error_m": 0.02224547788500786,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 36,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 2.217455371139535,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 85,
+      "removed_backend_ids": []
+    },
+    "unchanged": {
+      "passed": true,
+      "rebuilt_ids": [],
+      "preserved_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "access_track",
+        "wayside_shelter",
+        "remote_meadow",
+        "meadow"
+      ],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 9169,
+          "max_error_m": 0.02224547788500786,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 36,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 2.217455371139535,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 85,
+      "removed_backend_ids": []
+    },
+    "fresh_repeat": {
+      "passed": true,
+      "rebuilt_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "access_track",
+        "wayside_shelter",
+        "remote_meadow",
+        "meadow"
+      ],
+      "preserved_ids": [],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 9169,
+          "max_error_m": 0.02224547788500786,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 36,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 2.217455371139535,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 85,
+      "removed_backend_ids": []
+    },
+    "cache_recovery": {
+      "passed": true,
+      "rebuilt_ids": [
+        "west_ground",
+        "east_ground",
+        "access_track",
+        "wayside_shelter",
+        "remote_meadow",
+        "meadow"
+      ],
+      "preserved_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint"
+      ],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 9169,
+          "max_error_m": 0.02224547788500786,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 36,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 2.217455371139535,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 85,
+      "removed_backend_ids": []
+    },
+    "dependency_edit": {
+      "passed": true,
+      "rebuilt_ids": [
+        "remote_meadow"
+      ],
+      "preserved_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "access_track",
+        "wayside_shelter",
+        "meadow"
+      ],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 9169,
+          "max_error_m": 0.02224547788500786,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 36,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 2.217455371139535,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "remote_meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 49,
+          "max_error_m": 1.9073486328125e-06,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "remote_meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 5.2043044785994015,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 85,
+      "removed_backend_ids": []
+    },
+    "node_removal": {
+      "passed": true,
+      "rebuilt_ids": [],
+      "preserved_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "access_track",
+        "wayside_shelter",
+        "meadow"
+      ],
+      "geometry_checks": [
+        {
+          "node_id": "access_track",
+          "rule": "actual_road_mesh_contact",
+          "passed": true,
+          "sample_count": 9169,
+          "max_error_m": 0.02224547788500786,
+          "tolerance_m": 0.025,
+          "reason": "Dense actual road mesh contact is within tolerance",
+          "centerline_samples": 85
+        },
+        {
+          "node_id": "meadow",
+          "rule": "actual_native_grass_contact",
+          "passed": true,
+          "instances": 36,
+          "max_error_m": 9.5367431640625e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_id": "meadow",
+          "road_id": "access_track",
+          "rule": "actual_grass_road_clearance",
+          "passed": true,
+          "minimum_m": 2.217455371139535,
+          "required_m": 2.0
+        },
+        {
+          "node_id": "wayside_shelter",
+          "rule": "actual_object_bottom_contact",
+          "passed": true,
+          "max_error_m": 2.980232238769531e-07,
+          "tolerance_m": 0.02
+        },
+        {
+          "node_ids": [
+            "west_ground",
+            "east_ground"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": true,
+          "sample_count": 129,
+          "max_error_m": 0.0,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ],
+      "instances": 36,
+      "removed_backend_ids": [
+        "remote_meadow"
+      ]
+    },
+    "hard_failure": {
+      "passed": false,
+      "rebuilt_ids": [],
+      "preserved_ids": [
+        "upland_profile",
+        "lowland_profile",
+        "sky_tint",
+        "west_ground",
+        "east_ground",
+        "wayside_shelter",
+        "remote_meadow"
+      ],
+      "geometry_checks": []
+    },
+    "actual_geometry_failure": {
+      "passed": false,
+      "rebuilt_ids": [
+        "profile_a",
+        "profile_b",
+        "sampled_west",
+        "sampled_east"
+      ],
+      "preserved_ids": [],
+      "geometry_checks": [
+        {
+          "node_ids": [
+            "sampled_west",
+            "sampled_east"
+          ],
+          "rule": "actual_terrain_continuity",
+          "passed": false,
+          "sample_count": 129,
+          "max_error_m": 0.045546405017375946,
+          "tolerance_m": 0.0001,
+          "reason": "Actual shared mesh boundary interpolation must satisfy terrain continuity"
+        }
+      ]
+    }
+  },
+  "source_factory": "infinigen.assets.grassland.grass_tuft.GrassTuftFactory",
+  "infinigen_commit": "f5bcba8de47623da9b715348cf95822445e0e9a7",
+  "blender": "3.6.0",
+  "render_dimensions": [
+    640,
+    480
+  ],
+  "samples": 16,
+  "manual_inputs": [
+    "authored graph",
+    "patch bounds",
+    "edit location",
+    "camera"
+  ],
+  "is_image_reconstruction": false
+}

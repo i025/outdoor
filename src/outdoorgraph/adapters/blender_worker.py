@@ -1,4 +1,4 @@
-"""External Blender 3.6 worker; deliberately imports no OutdoorGraph package.
+"""Legacy bundle command-line bridge to the shared graph Blender executor.
 
 Consumes a JSON bundle prepared by the Python 3.11 application. Geometry and
 placement of vegetation are provided by the existing Infinigen implementation.
@@ -185,169 +185,13 @@ def main():
     parser.add_argument("--bundle", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--infinigen-source", type=Path, required=True)
-    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
+    argv = sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else sys.argv[1:]
     args = parser.parse_args(argv)
-    sys.path.insert(0, str(args.infinigen_source.resolve()))
-    from infinigen.assets.grassland.grass_tuft import GrassTuftFactory
-    from infinigen.core import init
-    from infinigen.core.nodes.node_info import Nodes
-    from infinigen.core.placement.factory import make_asset_collection
-    from infinigen.core.placement.instance_scatter import scatter_instances
-    from infinigen.core.util import blender as butil
-    from infinigen.core.util.math import FixedSeed
-
-    bundle_path = args.bundle.resolve()
-    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    scene_ir = bundle["scene"]
-    if scene_ir.get("world", {}).get("units") != "m" or scene_ir["world"].get("axis") != "z_up":
-        raise ValueError("Worker expects metric z-up Scene IR")
-    nodes = {n["id"]: n for n in scene_ir["nodes"]}
-    assets = {a["id"]: a for a in bundle["assets"]}
-    surface_node = nodes["moge_surface"]
-    vegetation = nodes["infinigen_grass"]
-    params = vegetation["params"]
-    if params["surface_node_id"] != surface_node["id"]:
-        raise ValueError("Vegetation surface does not match the imported MoGe mesh")
-    region = next(r for r in bundle["regions"] if r["id"] == params["region_id"])
-    if region.get("source") != "manual":
-        raise ValueError("Vegetation requires an explicit manual region")
-    if not local_path(region["uri"], bundle_path.parent).is_file():
-        raise FileNotFoundError("Manual region asset is missing")
-    density = float(params.get("density", 0.002))
-    scale = float(params.get("scale", 1.0))
-    count = int(params.get("asset_count", 2))
-    if not np.isfinite(density) or density <= 0 or not 0 < scale <= 100 or not 1 <= count <= 16:
-        raise ValueError("Invalid bounded vegetation density/scale/asset_count")
-    seed = int(vegetation.get("seed", 2026))
-    out = args.out.resolve()
-    out.mkdir(parents=True, exist_ok=True)
-    random.seed(seed)
-    np.random.seed(seed)
-    butil.clear_scene()
-    init.configure_render_cycles(
-        min_samples=0, num_samples=16, time_limit=0,
-        adaptive_threshold=0.1, exposure=1.0, denoise=False,
-    )
-    init.configure_cycles_devices(use_gpu=False)
-    surface, vertices, faces, allowed = load_surface(
-        surface_node, assets[surface_node["params"]["asset_id"]],
-        assets["reference_image"], bundle_path.parent,
-    )
-    surface["og_provenance"] = json.dumps(surface_node.get("metadata", {}), sort_keys=True)
-    camera, render_k, camera_error = create_camera(bundle["camera"])
-    bpy.context.view_layer.update()
-
-    def manual_selection(nw):
-        node = nw.new_node(Nodes.NamedAttribute, ["og_ground_allowed"],
-                           attrs={"data_type": "BOOLEAN"})
-        # This node has several identically named output sockets; the tuple
-        # lets NodeWrangler choose the enabled BOOLEAN output.
-        return node, "Attribute"
-
-    before = set(bpy.data.objects)
-    with FixedSeed(seed):
-        factory = GrassTuftFactory(seed)
-        collection = make_asset_collection([factory], n=count, verbose=False)
-        scatter = scatter_instances(
-            base_obj=surface, collection=collection, density=density,
-            scale=scale, scale_rand=0.2, scale_rand_axi=0.1,
-            normal_fac=0.2, ground_offset=0,
-            selection=manual_selection, fov=None, dist_max=None,
-        )
-    scatter.name = vegetation["id"]
-    for index, obj in enumerate(sorted(set(bpy.data.objects) - before, key=lambda o: o.name)):
-        object_id = vegetation["id"] + (":scatter" if obj == scatter else ":asset:%04d" % index)
-        tag(obj, vegetation["id"], object_id,
-            "infinigen.assets.grassland.grass_tuft.GrassTuftFactory", {**params, "seed": seed})
-        obj["og_provenance"] = json.dumps(vegetation.get("metadata", {}), sort_keys=True)
-    bpy.context.view_layer.update()
-    instances = []
-    for item in bpy.context.evaluated_depsgraph_get().object_instances:
-        if item.is_instance:
-            instances.append({
-                "id": vegetation["id"] + ":instance:%06d" % len(instances),
-                "og_node_id": vegetation["id"],
-                "position_xyz": list(item.matrix_world.translation),
-                "world_matrix": [list(row) for row in item.matrix_world],
-            })
-    if not instances:
-        raise RuntimeError("Native Infinigen scatter produced no vegetation; inspect region and density")
-
-    scene = bpy.context.scene
-    scene["og_scene_id"] = str(scene_ir["id"])
-    scene["og_bundle_schema"] = str(bundle.get("schema_version", "0.2"))
-    scene["og_provenance_json"] = json.dumps(bundle.get("provenance", {
-        node["id"]: node.get("metadata", {}) for node in scene_ir["nodes"]
-    }), sort_keys=True)
-    text = bpy.data.texts.get("OutdoorGraph.SceneBundle.json") or bpy.data.texts.new("OutdoorGraph.SceneBundle.json")
-    text.clear()
-    text.write(json.dumps(bundle, indent=2, ensure_ascii=False))
-    scene.world.color = (0.2, 0.2, 0.2)
-    bpy.ops.object.light_add(type="SUN")
-    sun = bpy.context.object
-    sun.name = "OutdoorGraphSun"
-    sun.rotation_euler = (0.3, -0.4, -0.5)
-    sun.data.energy = 2.0
-    tag(sun, "lighting", "lighting:sun", "blender.sun", {"energy": 2.0})
-    scene.render.threads_mode = "FIXED"
-    scene.render.threads = 4
-    scene.render.image_settings.file_format = "PNG"
-    scene.render.filepath = str(out / "render.png")
-    bpy.ops.render.render(write_still=True)
-
-    # Frame the manually selected local region. Far-away monocular background
-    # points can span kilometres and would make foreground grass disappear.
-    selected_vertices = vertices[np.unique(faces[allowed].ravel())]
-    grass_margin = max(0.25, max(max(obj.dimensions) for obj in collection.objects) * scale * 1.5)
-    bounds_min = selected_vertices.min(axis=0) - grass_margin
-    bounds_max = selected_vertices.max(axis=0) + grass_margin
-    center = (bounds_min + bounds_max) / 2
-    extent = max(float(np.max(bounds_max - bounds_min)), 1.0)
-    bpy.ops.object.camera_add(location=(center + extent * np.array([0.5, -0.8, 0.6])).tolist())
-    overview = bpy.context.object
-    overview.name = "overview_camera"
-    overview.rotation_euler = (Vector(center) - overview.location).to_track_quat("-Z", "Y").to_euler()
-    overview.data.type = "ORTHO"
-    overview.data.ortho_scale = extent * 1.35
-    overview.data.clip_end = extent * 10 + 1000
-    overview_config = {"scope": "local manual region new viewpoint", "extent": extent,
-                       "bounds_min": bounds_min.tolist(), "bounds_max": bounds_max.tolist()}
-    tag(overview, "overview", "overview:camera", "blender.overview", overview_config)
-    scene.camera = overview
-    scene.render.filepath = str(out / "overview.png")
-    bpy.ops.render.render(write_still=True)
-    scene.camera = camera
-    scene.render.filepath = str(out / "render.png")
-    bpy.ops.wm.save_as_mainfile(filepath=str(out / "scene.blend"))
-    export_glb(surface, scatter, out, butil)
-
-    manifest = {
-        "scene_id": scene_ir["id"], "device": "CPU", "samples": 16,
-        "infinigen_version": __import__("infinigen").__version__,
-        "blender_version": bpy.app.version_string, "seed": seed,
-        "source_factory": "infinigen.assets.grassland.grass_tuft.GrassTuftFactory",
-        "scatter_api": "infinigen.core.placement.instance_scatter.scatter_instances",
-        "vegetation_params": params, "source_asset_count": len(collection.objects),
-        "surface_vertices": len(vertices), "surface_faces": len(faces),
-        "selected_faces": int(allowed.sum()),
-        "selection_policy": "FACE BOOLEAN: all triangle vertex region weights equal one",
-        "manual_region": region,
-        "camera": bundle["camera"], "render_intrinsics_pixels": render_k.tolist(),
-        "render_width": scene.render.resolution_x, "render_height": scene.render.resolution_y,
-        "overview": overview_config,
-        "camera_projection_max_error_pixels": camera_error,
-        "objects": [
-            {"id": obj["og_object_id"], "node_id": obj["og_node_id"], "name": obj.name,
-             "generator": obj["og_generator"], "config": json.loads(obj["og_config"])}
-            for obj in bpy.data.objects if "og_object_id" in obj
-        ],
-        "vegetation_instances": instances, "vegetation_instance_count": len(instances),
-        "instance_id_policy": "Stable snapshot IDs for identical seed/configuration; no one-to-one identity guarantee across parameter changes",
-        "outputs": {name: str(out / name) for name in
-                    ("scene.blend", "scene.glb", "render.png", "overview.png")},
-    }
-    (out / "objects.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    print(json.dumps({"status": "passed", "instances": len(instances), "out": str(out)}))
+    # Keep the original command-line contract and geometry/camera helpers, while
+    # running every external node through the shared typed Planner registry.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from outdoorgraph.adapters.graph_blender_worker import run_bundle
+    run_bundle(args.bundle, args.out, args.infinigen_source)
 
 
 if __name__ == "__main__":

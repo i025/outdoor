@@ -1,3 +1,5 @@
+> Historical v0.2 integration design. See [v0.2.1](method_design_v0.2.1.md) for the unified execution runtime and real incremental editing.
+
 # OutdoorGraph v0.2 method boundary
 
 v0.2 establishes an execution layer for research above existing systems. It

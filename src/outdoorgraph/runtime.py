@@ -1,14 +1,11 @@
-"""Validated dependency traversal, deterministic regeneration and incremental edits."""
+"""Backward-compatible proxy entry point over the unified graph executor."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
-from outdoorgraph.constraints import evaluate_constraints
 from outdoorgraph.ir import Scene
-from outdoorgraph.operators import REGISTRY
-from outdoorgraph.validation import validate_scene, topological_ids
 
 
 @dataclass
@@ -17,23 +14,43 @@ class RunResult:
     rebuilt_ids: list[str]
     preserved_ids: list[str]
     constraint_reports: list[dict[str, Any]]
+    status: str = "completed"
+    node_reports: list[dict[str, Any]] = field(default_factory=list)
+    dependency_reports: list[dict[str, Any]] = field(default_factory=list)
+    failures: list[dict[str, Any]] = field(default_factory=list)
+    scene: Scene | None = None
 
     @property
     def passed(self) -> bool:
-        return all(item["passed"] or not item["hard"] for item in self.constraint_reports)
+        return (self.status == "completed" and not self.failures
+                and all(item["passed"] or not item["hard"] for item in self.constraint_reports))
+
+    @property
+    def updated_ids(self) -> list[str]:
+        return self.rebuilt_ids
+
+    @property
+    def retained_ids(self) -> list[str]:
+        return self.preserved_ids
 
     def to_dict(self) -> dict[str, Any]:
-        return {"artifacts": self.artifacts, "rebuilt_ids": self.rebuilt_ids,
-                "preserved_ids":self.preserved_ids, "passed":self.passed,
-                "constraint_reports":self.constraint_reports}
+        value = {"artifacts": self.artifacts, "rebuilt_ids": self.rebuilt_ids,
+                 "preserved_ids": self.preserved_ids, "passed": self.passed,
+                 "constraint_reports": self.constraint_reports, "status": self.status,
+                 "node_reports": self.node_reports, "dependency_reports": self.dependency_reports,
+                 "failures": self.failures, "updated_ids": self.updated_ids,
+                 "retained_ids": self.retained_ids}
+        if self.scene is not None:
+            value["scene"] = self.scene.to_dict()
+        return value
 
 
 def downstream(scene: Scene, changed_ids: set[str]) -> set[str]:
-    """Conservative closure over validated runtime edges (NOT proposed hypotheses)."""
+    """Conservative closure over candidate execution edges, excluding hypotheses."""
     ids = {node.id for node in scene.nodes}
     if not changed_ids.issubset(ids):
-        raise KeyError(f"Unknown edited nodes: {sorted(changed_ids-ids)}")
-    followers: dict[str, set[str]] = {item:set() for item in ids}
+        raise KeyError(f"Unknown edited nodes: {sorted(changed_ids - ids)}")
+    followers: dict[str, set[str]] = {item: set() for item in ids}
     for edge in scene.valid_edges():
         followers[edge.source_id].add(edge.target_id)
     affected = set(changed_ids)
@@ -48,35 +65,13 @@ def downstream(scene: Scene, changed_ids: set[str]) -> set[str]:
 
 def execute(scene: Scene, previous: dict[str, dict[str, Any]] | None = None,
             changed_ids: set[str] | None = None) -> RunResult:
-    """Build initial scene, or selectively rebuild validated dependents.
+    """Keep legacy exceptions while using contracts and automatic cache invalidation."""
+    from outdoorgraph.execution import execute as unified_execute
 
-    `previous` must be from this same scene graph version. Structural edits
-    require the caller to revalidate and, if necessary, do a fresh build.
-    """
-    validate_scene(scene)
-    order = topological_ids(scene)
-    incoming: dict[str, list[str]] = {n.id:[] for n in scene.nodes}
-    for dep in scene.valid_edges():
-        incoming[dep.target_id].append(dep.source_id)
-    if previous is None or changed_ids is None:
-        rebuild = set(order)
-        artifacts: dict[str, dict[str, Any]] = {}
-    else:
-        if set(previous) != set(order):
-            raise ValueError("Previous artifact IDs do not match scene graph; rebuild all")
-        rebuild = downstream(scene, changed_ids)
-        artifacts = dict(previous)
-    rebuilt, preserved = [], []
-    for node_id in order:
-        if node_id not in rebuild:
-            preserved.append(node_id)
-            continue
-        node = scene.get_node(node_id)
-        fn = REGISTRY.get(node.operator)
-        if fn is None:
-            raise ValueError(f"Unknown procedural operator: {node.operator}")
-        inputs = {src:artifacts[src] for src in incoming[node_id]}
-        artifacts[node_id] = fn(node, inputs)
-        rebuilt.append(node_id)
-    checks = evaluate_constraints(scene, artifacts)
-    return RunResult(artifacts, rebuilt, preserved, checks)
+    # Old callers with arbitrary, incomplete dictionaries retain the established
+    # diagnostic. Partial signed caches use the new missing-cache rebuild path.
+    if (previous and set(previous) != {node.id for node in scene.nodes}
+            and any(not isinstance(item, dict) or "_execution" not in item
+                    for item in previous.values())):
+        raise ValueError("Previous artifact IDs do not match scene graph; rebuild all")
+    return unified_execute(scene, previous, changed_ids, raise_on_error=True)

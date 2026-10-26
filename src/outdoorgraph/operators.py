@@ -1,8 +1,4 @@
-"""Deterministic proxy operators, deliberately not yet photorealistic.
-
-The contract is the interesting part: stable inputs/outputs, shared units and
-explicit upstream artifacts. Production Blender/Infinigen adapters come later.
-"""
+"""Deterministic geometry shared by proxy execution and Blender operators."""
 
 from __future__ import annotations
 
@@ -34,22 +30,74 @@ def get_artifact(inputs: dict[str, Artifact], kind: str) -> Artifact:
     return matches[0]
 
 
+def finite_number(value: Any, name: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be finite")
+    return number
+
+
 def height_at(terrain: Artifact, x: float, y: float) -> float:
     p = terrain["params"]
-    base = (float(p.get("base_height_m", 0))
-            + float(p.get("slope_x", 0)) * x
-            + float(p.get("slope_y", 0)) * y)
-    scale = max(1e-3, float(p.get("noise_scale_m", 40)))
-    rough = float(p.get("noise_amplitude_m", 0)) * (
-        math.sin(x / scale + float(p.get("phase_x", 0)))
-        * math.cos(y / scale + float(p.get("phase_y", 0))))
+    x, y = finite_number(x, "terrain x"), finite_number(y, "terrain y")
+    base = (finite_number(p.get("base_height_m", 0), "base_height_m")
+            + finite_number(p.get("slope_x", 0), "slope_x") * x
+            + finite_number(p.get("slope_y", 0), "slope_y") * y)
+    scale = finite_number(p.get("noise_scale_m", 40), "noise_scale_m")
+    if scale <= 0:
+        raise ValueError("noise_scale_m must be positive")
+    rough = finite_number(p.get("noise_amplitude_m", 0), "noise_amplitude_m") * (
+        math.sin(x / scale + finite_number(p.get("phase_x", 0), "phase_x"))
+        * math.cos(y / scale + finite_number(p.get("phase_y", 0), "phase_y")))
     bump = p.get("local_bump", {})
     if bump:
-        bx, by = float(bump.get("x", 0)), float(bump.get("y", 0))
-        sigma = max(1e-3, float(bump.get("sigma_m", 15)))
-        amplitude = float(bump.get("amplitude_m", 0))
-        rough += amplitude * math.exp(-((x-bx)**2 + (y-by)**2)/(2*sigma**2))
-    return base + rough
+        bx = finite_number(bump.get("x", 0), "local_bump.x")
+        by = finite_number(bump.get("y", 0), "local_bump.y")
+        amplitude = finite_number(bump.get("amplitude_m", 0), "local_bump.amplitude_m")
+        profile = bump.get("profile", "gaussian")
+        if profile == "compact":
+            radius = finite_number(bump.get("radius_m", bump.get("sigma_m", 15)),
+                                   "local_bump.radius_m")
+            if radius <= 0:
+                raise ValueError("local_bump.radius_m must be positive")
+            radial = math.hypot(x - bx, y - by) / radius
+            # Value, slope and curvature all reach zero at the support boundary.
+            if radial < 1:
+                rough += amplitude * (1 - radial * radial) ** 3
+        elif profile == "gaussian":
+            sigma = finite_number(bump.get("sigma_m", 15), "local_bump.sigma_m")
+            if sigma <= 0:
+                raise ValueError("local_bump.sigma_m must be positive")
+            radial = math.hypot(x - bx, y - by) / sigma
+            rough += amplitude * math.exp(-radial * radial / 2)
+        else:
+            raise ValueError(f"Unknown local_bump profile: {profile}")
+    return finite_number(base + rough, "terrain height")
+
+
+def sample_polyline(points: list[list[float]], spacing_m: float) -> list[list[float]]:
+    """Sample the actual piecewise-linear XYZ curve, including each midpoint.
+
+    Interpolating z here is intentional: constraint validation must measure the
+    geometry that is rendered, rather than reprojecting it onto the terrain.
+    """
+    spacing = finite_number(spacing_m, "sample_spacing_m")
+    if spacing <= 0:
+        raise ValueError("sample_spacing_m must be positive")
+    if len(points) < 2:
+        raise ValueError("Road requires at least two points")
+    clean = []
+    for point in points:
+        if len(point) != 3:
+            raise ValueError("Road points must contain XYZ coordinates")
+        clean.append([finite_number(value, "road coordinate") for value in point])
+    samples = [clean[0]]
+    for start, end in zip(clean[:-1], clean[1:]):
+        length = math.hypot(end[0] - start[0], end[1] - start[1])
+        steps = max(2, math.ceil(length / spacing))
+        samples.extend([[a + (b - a) * step / steps for a, b in zip(start, end)]
+                        for step in range(1, steps + 1)])
+    return samples
 
 
 def point_to_segment_distance(x: float, y: float, a: list[float], b: list[float]) -> float:
@@ -62,7 +110,7 @@ def point_to_segment_distance(x: float, y: float, a: list[float], b: list[float]
 
 
 def distance_to_road(x: float, y: float, road: Artifact) -> float:
-    points = road["points"]
+    points = road.get("sampled_points", road["points"])
     return min(point_to_segment_distance(x, y, p, q) for p,q in zip(points[:-1], points[1:]))
 
 
@@ -70,7 +118,9 @@ def distance_to_road(x: float, y: float, road: Artifact) -> float:
 def terrain_heightfield(node: Node, inputs: dict[str, Artifact]) -> Artifact:
     if inputs:
         raise ValueError("Terrain operator does not take dependencies in v0.1")
-    return {"kind":"terrain", "params":deepcopy(node.params), "bounds_xy":list(node.bounds_xy)}
+    artifact = {"kind":"terrain", "params":deepcopy(node.params), "bounds_xy":list(node.bounds_xy)}
+    height_at(artifact, node.bounds_xy[0], node.bounds_xy[1])
+    return artifact
 
 
 @register("road.polyline")
@@ -82,10 +132,21 @@ def road_polyline(node: Node, inputs: dict[str, Artifact]) -> Artifact:
     width = float(node.params.get("width_m", 4))
     if not math.isfinite(width) or width <= 0:
         raise ValueError("Road width_m must be finite and positive")
-    offset = float(node.params.get("height_offset_m", 0))
-    points = [[float(x), float(y), height_at(terrain,float(x),float(y)) + offset]
-              for x,y in xy_points]
-    return {"kind":"road", "width_m":width, "points":points}
+    offset = finite_number(node.params.get("height_offset_m", 0), "height_offset_m")
+    spacing = finite_number(node.params.get("sample_spacing_m", 1), "sample_spacing_m")
+    points = []
+    for point in xy_points:
+        if len(point) != 2:
+            raise ValueError("Road control_points_xy must contain XY coordinates")
+        x, y = [finite_number(value, "road control coordinate") for value in point]
+        points.append([x, y, height_at(terrain, x, y) + offset])
+    if any(p[:2] == q[:2] for p, q in zip(points[:-1], points[1:])):
+        raise ValueError("Road consecutive control points must be distinct")
+    sampled = sample_polyline(points, spacing)
+    for point in sampled:
+        point[2] = height_at(terrain, point[0], point[1]) + offset
+    return {"kind":"road", "width_m":width, "points":points,
+            "sampled_points":sampled, "sampling_spacing_m":spacing}
 
 
 @register("vegetation.scatter")
@@ -96,9 +157,11 @@ def vegetation_scatter(node: Node, inputs: dict[str, Artifact]) -> Artifact:
     count = int(node.params.get("count", 40))
     if not 0 <= count <= 10000:
         raise ValueError("Invalid requested instance count")
-    min_spacing = float(node.params.get("min_spacing_m", 4))
-    buffer = float(node.params.get("road_buffer_m", 2))
-    noise_scale = max(1e-3, float(node.params.get("noise_scale_m", 32)))
+    min_spacing = finite_number(node.params.get("min_spacing_m", 4), "min_spacing_m")
+    buffer = finite_number(node.params.get("road_buffer_m", 2), "road_buffer_m")
+    noise_scale = finite_number(node.params.get("noise_scale_m", 32), "noise_scale_m")
+    if min_spacing < 0 or buffer < 0 or noise_scale <= 0:
+        raise ValueError("Vegetation spacing/buffer must be nonnegative and noise scale positive")
     x0,y0,x1,y1 = node.bounds_xy
     positions: list[list[float]] = []
     attempts = 0
@@ -122,8 +185,10 @@ def vegetation_scatter(node: Node, inputs: dict[str, Artifact]) -> Artifact:
 @register("building.proxy")
 def building_proxy(node: Node, inputs: dict[str, Artifact]) -> Artifact:
     terrain = get_artifact(inputs, "terrain")
-    x, y = [float(a) for a in node.params["position_xy"]]
-    size = [float(a) for a in node.params.get("size_m", [8,8,7])]
+    x, y = [finite_number(a, "position_xy") for a in node.params["position_xy"]]
+    size = [finite_number(a, "size_m") for a in node.params.get("size_m", [8,8,7])]
+    if len(size) != 3 or any(value <= 0 for value in size):
+        raise ValueError("Building size_m must have three positive dimensions")
     return {"kind":"building", "position_xyz":[x,y,height_at(terrain,x,y)], "size_m":size}
 
 
